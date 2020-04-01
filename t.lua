@@ -17,6 +17,10 @@ target_pos["x"] = 15
 target_pos["y"] = 15
 target_pos["z"] = 15
 
+dig_blacklist = {}
+dig_whitelist = {}
+
+BUCKET_SLOT = 14
 FILLER_SLOT = 15
 TORCH_ID = 16
 CRUMBS = true
@@ -345,64 +349,166 @@ function printPos(_position)
     print(getPositionString(_position))
 end
 
+function checkWhiteList(block_name)
+    if dig_whitelist[block_name] then
+        return true
+    else
+        return false
+    end
+end
 
+function checkBlackList(block_name)
+    if dig_blacklist[block_name] then
+        return true
+    else
+        return false
+    end
+end
 
+function isBlockValuable(block_data)
+    local block_name = block_data.name
+    local valuable = false
+    if string.find(block_name, "_ore") then
+        valuable = true
+    end
+    if checkWhiteList(block_name) then
+        valuable = true
+    end
+    if checkBlackList(block_name) then
+        valuable = false
+    end
+    return valuable
+end
 
+function processLavaUp()
+    local present, block_data = turtle.inspectUp()
+    local block_name = block_data.name
+    if present then
+        if string.find(block_name, 'lava') then
+            turtle.select(BUCKET_SLOT)
+            turtle.placeUp()
+            turtle.refuel()
+            return false
+        end
+    end
+end
 
+function processLava()
+    local present, block_data = turtle.inspect()
+    local block_name = block_data.name
+    if present then
+        if string.find(block_name, 'lava') then
+            turtle.select(BUCKET_SLOT)
+            turtle.place()
+            turtle.refuel()
+            return false
+        end
+    end
+end
+
+function processLavaDown()
+    local present, block_data = turtle.inspectDown()
+    local block_name = block_data.name
+    if present then
+        if string.find(block_name, 'lava') then
+            turtle.select(BUCKET_SLOT)
+            turtle.placeDown()
+            turtle.refuel()
+            return false
+        end
+    end
+end
 
 function mine(count)
     count = count or 1
     local counter=0
     repeat
         counter = counter + 1
+        processLava()
         forward()
         printPos()
-      if turtle.detectUp() then
-          turtle.digUp()
-      end
-      if turtle.detectDown() then
-          turtle.digDown()
-      end
+        processLavaUp()
+        processLavaDown()
+        if turtle.detectUp() then
+            turtle.digUp()
+        end
+        if turtle.detectDown() then
+            turtle.digDown()
+        end
         mineWalls()
     until (counter >= count)
 end
 
 function checkBlockUp()
-    return false
+    local present, block_data = turtle.inspectUp()
+    if not present then
+        return false
+    end
+    return isValuable(block_data)
 end
 
 function checkBlock()
-    return false
+    local present, block_data = turtle.inspect()
+    if not present then
+        return false
+    end
+    if string.find(block_name, 'lava') then
+        turtle.select(BUCKET_SLOT)
+        turtle.place()
+        turtle.refuel()
+        turtle.select(FILLER_SLOT)
+        turtle.place()
+        return false
+    end
+    return isValuable(block_data)
 end
 
 function checkBlockDown()
-    return false
+    local present, block_data = turtle.inspectDown()
+    if not present then
+        return false
+    end
+    if string.find(block_name, 'lava') then
+        turtle.select(BUCKET_SLOT)
+        turtle.placeDown()
+        turtle.refuel()
+        turtle.select(FILLER_SLOT)
+        turtle.placeDown()
+        return false
+    end
+    return isValuable(block_data)
 end
 
-function processUp()
+function processBlockUp()
+    processLavaUp()
     if checkBlockUp() then
         turtle.digUp()
     end
+    os.sleep(0.01)
     if turtle.detectUp() then
         turtle.select(FILLER_SLOT)
         turtle.placeUp()
     end
 end
 
-function process()
+function processBlock()
+    processLava()
     if checkBlock() then
         turtle.dig()
     end
+    os.sleep(0.01)
     if turtle.detect() then
         turtle.select(FILLER_SLOT)
         turtle.place()
     end
 end
 
-function processDown()
+function processBlockDown()
+    processLavaDown()
     if checkBlockDown() then
         turtle.digDown()
     end
+    os.sleep(0.01)
     if turtle.detectDown() then
         turtle.select(FILLER_SLOT)
         turtle.placeDown()
@@ -410,23 +516,23 @@ function processDown()
 end
 
 function mineWalls()
-    up(false)
-    processUp()
-    turnRight(false)
-    process()
-    turnAround(false)
-    process()
     down(false)
-    process()
-    turnAround(false)
-    process()
-    down(false)
-    process()
-    turnAround(false)
-    process()
-    processDown()
+    processBlockDown()
     turnRight(false)
+    processBlock()
+    turnAround(false)
+    processBlock()
     up(false)
+    processBlock()
+    turnAround(false)
+    processBlock()
+    up(false)
+    processBlock()
+    turnAround(false)
+    processBlock()
+    processBlockUp()
+    turnRight(false)
+    down(false)
 end
 
 function clearInventoryAndRefuel()
@@ -435,7 +541,7 @@ function clearInventoryAndRefuel()
         rewind()
     until (comparePositions(turtle_pos, getPosition("start")))
     printPos()
-    for slot=2,14 do
+    for slot=1,12 do
             turtle.select(slot)
             turtle.dropDown()
     end
