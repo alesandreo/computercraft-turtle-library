@@ -9,6 +9,9 @@
 --turtle = require "turtle"
 turtle_pos = {}
 saved_positions = {}
+crumbs = {}
+redo_crumbs = {}
+redoing = false
 target_pos = {}
 target_pos["x"] = 15
 target_pos["y"] = 15
@@ -16,6 +19,7 @@ target_pos["z"] = 15
 
 FILLER_SLOT = 15
 TORCH_ID = 16
+CRUMBS = true
 
 function init()
     turtle_pos["x"] = 0
@@ -38,24 +42,55 @@ function shallowcopytable(orig)
     return copy
 end
 
+function deleteTable(tab)
+    for k, v in pairs(tab) do
+        tab[k] = nil
+    end
+    tab = nil
+end
+
 function savePosition(name, position)
     saved_positions[name] = shallowcopytable(position)
+end
+
+function deletePosition(name)
+    deleteTable(getPosition(name))
 end
 
 function getPosition(name)
     return saved_positions[name]
 end
 
+function comparePositions(_position_one, _position_two)
+    if _position_one["x"] ~= _position_two["x"] then
+--        print("x",_position_one["x"],_position_two["x"])
+        return false
+    end
+    if _position_one["y"] ~= _position_two["y"] then
+--        print("y",_position_one["y"],_position_two["y"])
+        return false
+    end
+    if _position_one["z"] ~= _position_two["z"] then
+--        print("z",_position_one["z"],_position_two["z"])
+        return false
+    end
+    if getFace(_position_one["face"]) ~= getFace(_position_two["face"]) then
+--        print("face",getFace(_position_one["face"]),getFace(_position_two["face"]))
+        return false
+    end
+    return true
+end
+
 -- 0 = North
 -- 1 = East
 -- 2 = South
 -- 3 = West
-function getFace()
+function getFace(_position)
+    _position = _position or turtle_pos
     return turtle_pos["face"] % 4
 end
 
-function getFaceAsString()
-    local facing = getFace()
+function getFaceAsString(facing)
     if facing == 0 then
         return "North"
     elseif facing == 1 then
@@ -64,6 +99,8 @@ function getFaceAsString()
         return "South"
     elseif facing == 3 then
         return "West"
+    else
+        return ""
     end
 end
 
@@ -94,6 +131,11 @@ function adjustPostion(adjustment)
     end
 end
 
+function getTurtlePosition()
+    local v_turtle_pos = shallowcopytable(turtle_pos)
+    return v_turtle_pos
+end
+
 function getFrontPosition()
     local adjustment = 1
     local facing = getFace()
@@ -121,23 +163,32 @@ function turnToFace(target_facing)
     end
 end
 
-function turnLeft()
+function turnLeft(record)
+    if record == nil then record = true end
+    if record then record = CRUMBS end
     turtle.turnLeft()
+    if record then recordAction("turnLeft") end
     turtle_pos["face"] = turtle_pos["face"] - 1
     return true
 end
 
-function turnRight()
+function turnRight(record)
+    if record == nil then record = true end
+    if record then record = CRUMBS end
     turtle.turnRight()
+    if record then recordAction("turnRight") end
     turtle_pos["face"] = turtle_pos["face"] + 1
     return true
 end
 
-function up()
+function up(record)
+    if record == nil then record = true end
+    if record then record = CRUMBS end
     if turtle.detectUp() then
         turtle.digUp()
     end
     if turtle.up() then
+        if record then recordAction("up") end
         turtle_pos["y"] = turtle_pos["y"] + 1
         return true
     else
@@ -145,11 +196,14 @@ function up()
     end
 end
 
-function down()
+function down(record)
+    if record == nil then record = true end
+    if record then record = CRUMBS end
     if turtle.detectDown() then
         turtle.digDown()
     end
     if turtle.down() then
+        if record then recordAction("down") end
         turtle_pos["y"] = turtle_pos["y"] - 1
         return true
     else
@@ -157,11 +211,14 @@ function down()
     end
 end
 
-function forward()
+function forward(record)
+    if record == nil then record = true end
+    if record then record = CRUMBS end
     if turtle.detect() then
         turtle.dig()
     end
     if turtle.forward() then
+        if record then recordAction("forward") end
         adjustPostion(1)
         return true
     else
@@ -169,8 +226,11 @@ function forward()
     end
 end
 
-function back()
+function back(record)
+    if record == nil then record = true end
+    if record then record = CRUMBS end
     if turtle.back() then
+        if record then recordAction("back") end
         adjustPostion(-1)
         return true
     else
@@ -178,80 +238,248 @@ function back()
     end
 end
 
-function strafeLeft()
-    turnLeft()
-    forward()
-    turnRight()
+function strafeLeft(record)
+    turnLeft(record)
+    forward(record)
+    turnRight(record)
 end
 
-function strafeRight()
-    turnRight()
-    forward()
-    turnLeft()
+function strafeRight(record)
+    turnRight(record)
+    forward(record)
+    turnLeft(record)
 end
 
-function turnAround()
-    turnRight()
-    turnRight()
+function turnAround(record)
+    turnRight(record)
+    turnRight(record)
+end
+
+function clearRedoTable()
+    for i, v in ipairs(redo_crumbs) do
+        table.remove(redo_crumbs, i)
+    end
+end
+
+function recordAction(action)
+    if redoing then
+    else
+        clearRedoTable()
+    end
+    table.insert(crumbs, action)
+end
+
+function rewind(numberOfMoves)
+    if CRUMBS then
+        local numberOfMoves = numberOfMoves or 1
+        local count = 0
+        repeat
+            count = count + 1
+            undoAction(table.remove(crumbs))
+        until ( count >= numberOfMoves )
+    else
+        return false
+    end
+end
+
+function redo(numberOfMoves)
+    if CRUMBS then
+        local numberOfMoves = numberOfMoves or 1
+        local count = 0
+        redoing = true
+        repeat
+            count = count + 1
+            doAction(table.remove(redo_crumbs))
+        until ( count >= numberOfMoves )
+        redoing = false
+    else
+        return false
+    end
+end
+
+function getOppositeAction(action)
+    if action == "turnLeft" then
+        return "turnRight"
+    elseif action == "turnRight" then
+        return "turnLeft"
+    elseif action == "up" then
+        return "down"
+    elseif action == "down" then
+        return "up"
+    elseif action == "forward" then
+        return "back"
+    elseif action == "back" then
+        return "forward"
+    end
+end
+
+function doAction(action, record)
+    if action == "turnLeft" then
+        return turnLeft(record)
+    elseif action == "turnRight" then
+        return turnRight(record)
+    elseif action == "up" then
+        return up(record)
+    elseif action == "down" then
+        return down(record)
+    elseif action == "forward" then
+        return forward(record)
+    elseif action == "back" then
+        return back(record)
+    end
+end
+
+function undoAction(action)
+    local result
+    result = doAction(getOppositeAction(action), false)
+    table.insert(redo_crumbs, action)
+    return result
+end
+
+function getPositionString(_position)
+    _position = _position or turtle_pos
+    return "[",_position["x"],",",_position["y"],",",_position["z"],",",getFaceAsString(getFace(_position["face"])),"]"
 end
 
 function printPos(_position)
-    local _position = _position or turtle_pos
-    print("[",_position["x"],",",_position["y"],",",_position["z"],",",getFaceAsString(),"]")
+    print(getPositionString(_position))
 end
-function mine()
-    forward()
-    if turtle.detectUp() then
+
+
+
+
+
+
+function mine(count)
+    count = count or 1
+    local counter=0
+    repeat
+        counter = counter + 1
+        forward()
+        printPos()
+      if turtle.detectUp() then
+          turtle.digUp()
+      end
+      if turtle.detectDown() then
+          turtle.digDown()
+      end
+        mineWalls()
+    until (counter >= count)
+end
+
+function checkBlockUp()
+    return false
+end
+
+function checkBlock()
+    return false
+end
+
+function checkBlockDown()
+    return false
+end
+
+function processUp()
+    if checkBlockUp() then
         turtle.digUp()
     end
-    if turtle.detectDown() then
-        turtle.digDown()
+    if turtle.detectUp() then
+        turtle.select(FILLER_SLOT)
+        turtle.placeUp()
     end
 end
 
-function checkTargetBlock()
-    return true
+function process()
+    if checkBlock() then
+        turtle.dig()
+    end
+    if turtle.detect() then
+        turtle.select(FILLER_SLOT)
+        turtle.place()
+    end
+end
+
+function processDown()
+    if checkBlockDown() then
+        turtle.digDown()
+    end
+    if turtle.detectDown() then
+        turtle.select(FILLER_SLOT)
+        turtle.placeDown()
+    end
+end
+
+function mineWalls()
+    up(false)
+    processUp()
+    turnRight(false)
+    process()
+    turnAround(false)
+    process()
+    down(false)
+    process()
+    turnAround(false)
+    process()
+    down(false)
+    process()
+    turnAround(false)
+    process()
+    processDown()
+    turnRight(false)
+    up(false)
+end
+
+function clearInventoryAndRefuel()
+    savePosition("resume",getTurtlePosition())
+    repeat
+        rewind()
+    until (comparePositions(turtle_pos, getPosition("start")))
+    printPos()
+    for slot=2,14 do
+            turtle.select(slot)
+            turtle.dropDown()
+    end
+    turnRight(false)
+    turtle.select(2)
+    turtle.suck()
+    turtle.refuel()
+    turnLeft(false)
+    turnLeft(false)
+    turtle.select(TORCH_ID)
+    turtle.suck()
+    turtle.select(FILLER_SLOT)
+    turtle.suck()
+    turnRight(false)
+    repeat
+        redo()
+    until (comparePositions(turtle_pos, getPosition("resume")))
+    deletePosition("resume")
+    printPos()
 end
 
 init()
-turnRight()
+savePosition("start", getTurtlePosition())
+turnRight(false)
 savePosition("chest", getFrontPosition())
-printPos(getPosition("chest"))
-turnLeft()
+turnLeft(false)
 
 repeat
     repeat
         mine()
-        printPos()
         if turtle_pos["x"] % 8 == 4 then
             turtle.select(TORCH_ID)
             turtle.placeDown()
         end
     until (turtle_pos["x"] >= target_pos["x"])
     turnLeft()
-    printPos()
     mine()
-    mine()
-    back()
-    back()
-    printPos()
-    turnAround()
-    repeat
-        mine()
-        printPos()
-    until (turtle_pos["z"] % 3 == 0)
-    mine()
-    printPos()
-    mine()
-    printPos()
-    back()
-    printPos()
-    back()
-    printPos()
+    rewind(2)
+    turnRight()
+    mine(4)
+    rewind()
     turnRight()
     repeat
         mine()
-        printPos()
         if turtle_pos["x"] % 8 == 4 then
             turtle.select(TORCH_ID)
             turtle.placeDown()
@@ -259,18 +487,11 @@ repeat
     until (turtle_pos["x"] <= 0)
     turnRight()
     mine()
-    printPos()
-    mine()
-    printPos()
-    back()
-    printPos()
-    back()
-    printPos()
-    turnAround()
-    repeat
-        mine()
-        printPos()
-    until (turtle_pos["z"] % 3 == 0)
+    rewind(2)
+    turnLeft()
+    mine(4)
+    rewind()
     turnLeft()
 until (turtle_pos["z"] >= target_pos["z"])
+clearInventoryAndRefuel()
 printPos()
