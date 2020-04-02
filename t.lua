@@ -383,7 +383,7 @@ function isBlockValuable(block_data)
     return valuable
 end
 
-function restock()
+function restockFillMaterial()
     local orig_select = turtle.getSelectedSlot()
     local filler_space = turtle.getItemSpace()
     if filler_space > 0 then
@@ -636,23 +636,19 @@ end
 
 function lavaSwimUp()
     local orig_sel = turtle.getselectedslot()
-    turtle.select(bucket_slot)
-    turtle.place()
-    forward()
-    turnaround(false)
-    turtle.place()
-    turnaround(false)
+    turtle.select(BUCKET_SLOT)
+    turtle.placeUp()
+    up()
+    turtle.placeDown()
     turtle.select(orig_sel)
 end
 
 function lavaSwimDown()
     local orig_sel = turtle.getselectedslot()
-    turtle.select(bucket_slot)
-    turtle.place()
-    forward()
-    turnaround(false)
-    turtle.place()
-    turnaround(false)
+    turtle.select(BUCKET_SLOT)
+    turtle.placeDown()
+    down()
+    turtle.placeUp()
     turtle.select(orig_sel)
 end
 

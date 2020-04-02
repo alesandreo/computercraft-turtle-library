@@ -21,7 +21,7 @@ repeat
             turtle.placeDown()
         end
     until (turtle_pos["x"] >= target_pos["x"])
-    restock()
+    restockFillMaterial()
     turnLeft()
     mine()
     rewind(2)
