@@ -1,4 +1,5 @@
 module "turtle"
+function craft() end
 function forward() end
 function back() end
 function up() end
@@ -6,27 +7,31 @@ function down() end
 function turnLeft() end
 function turnRight() end
 function select() end
+function getSelectedSlot() end
 function getItemCount() end
 function getItemSpace() end
+function getItemDetail() end
+function equipLeft() end
+function equipRight() end
+function attack() end
+function attackUp() end
+function attackDown() end
 function dig() end
 function digUp() end
 function digDown() end
 function place() end
 function placeUp() end
 function placeDown() end
-function attack() end
-function attackUp() end
-function attackDown() end
 function detect() end
-function detectUp()
-    return true
-end
+function detectUp() end
 function detectDown() end
+function inspect() end
+function inspectUp() end
+function inspectDown() end
 function compare() end
 function compareUp() end
 function compareDown() end
 function compareTo() end
-function transferTo() end
 function drop() end
 function dropUp() end
 function dropDown() end
@@ -35,4 +40,4 @@ function suckUp() end
 function suckDown() end
 function getFuelLevel() end
 function refuel() end
-function craft()  end
+function transferTo() end

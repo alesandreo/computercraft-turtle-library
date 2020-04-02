@@ -13,9 +13,9 @@ crumbs = {}
 redo_crumbs = {}
 redoing = false
 target_pos = {}
-target_pos["x"] = 15
+target_pos["x"] = 25
 target_pos["y"] = 15
-target_pos["z"] = 15
+target_pos["z"] = 25
 
 dig_blacklist = {}
 dig_whitelist = {}
@@ -24,6 +24,9 @@ BUCKET_SLOT = 14
 FILLER_SLOT = 15
 TORCH_ID = 16
 CRUMBS = true
+
+dig_whitelist["minecraft:obsidian"] = true
+dig_whitelist["powah:dry_ice"] = true
 
 function init()
     turtle_pos["x"] = 0
@@ -380,6 +383,45 @@ function isBlockValuable(block_data)
     return valuable
 end
 
+function restock()
+    local orig_select = turtle.getSelectedSlot()
+    local filler_space = turtle.getItemSpace()
+    if filler_space > 0 then
+        if turtle.compareTo(FILLER_SLOT) then
+            for slot=1,13 do
+                turtle.select(slot)
+                turtle.transferTo(FILLER_SLOT, filler_space)
+                filler_space = turtle.getItemSpace()
+                if filler_space == 0 then
+                    break
+                end
+            end
+        end
+    end
+    turtle.select(orig_select)
+end
+
+function fill()
+    local orig_select = turtle.getSelectedSlot()
+    turtle.select(FILLER_SLOT)
+    turtle.place()
+    turtle.select(orig_select)
+end
+
+function fillUp()
+    local orig_select = turtle.getSelectedSlot()
+    turtle.select(FILLER_SLOT)
+    turtle.placeUp()
+    turtle.select(orig_select)
+end
+
+function fillDown()
+    local orig_select = turtle.getSelectedSlot()
+    turtle.select(FILLER_SLOT)
+    turtle.placeDown()
+    turtle.select(orig_select)
+end
+
 function processLavaUp()
     local present, block_data = turtle.inspectUp()
     local block_name = block_data.name
@@ -419,13 +461,32 @@ function processLavaDown()
     end
 end
 
-function mine(count)
+function mine(count, placement)
     count = count or 1
+    if placement == nil then placement = true end
     local counter=0
     repeat
         counter = counter + 1
         processLava()
         forward()
+        local present, block_data = turtle.inspect()
+        if present then
+            if string.find(block_data.name, 'water') then
+                fill()
+            end
+        end
+        local present, block_data = turtle.inspectUp()
+        if present then
+            if string.find(block_data.name, 'water') then
+                fillUp()
+            end
+        end
+        local present, block_data = turtle.inspectDown()
+        if present then
+            if string.find(block_data.name, 'water') then
+                fillDown()
+            end
+        end
         printPos()
         processLavaUp()
         processLavaDown()
@@ -435,7 +496,7 @@ function mine(count)
         if turtle.detectDown() then
             turtle.digDown()
         end
-        mineWalls()
+        mineWalls(placement)
     until (counter >= count)
 end
 
@@ -444,7 +505,7 @@ function checkBlockUp()
     if not present then
         return false
     end
-    return isValuable(block_data)
+    return isBlockValuable(block_data)
 end
 
 function checkBlock()
@@ -452,15 +513,7 @@ function checkBlock()
     if not present then
         return false
     end
-    if string.find(block_name, 'lava') then
-        turtle.select(BUCKET_SLOT)
-        turtle.place()
-        turtle.refuel()
-        turtle.select(FILLER_SLOT)
-        turtle.place()
-        return false
-    end
-    return isValuable(block_data)
+    return isBlockValuable(block_data)
 end
 
 function checkBlockDown()
@@ -468,69 +521,65 @@ function checkBlockDown()
     if not present then
         return false
     end
-    if string.find(block_name, 'lava') then
-        turtle.select(BUCKET_SLOT)
-        turtle.placeDown()
-        turtle.refuel()
-        turtle.select(FILLER_SLOT)
-        turtle.placeDown()
-        return false
-    end
-    return isValuable(block_data)
+    return isBlockValuable(block_data)
 end
 
-function processBlockUp()
+function processBlockUp(placement)
+    if placement == nil then placement = true end
     processLavaUp()
     if checkBlockUp() then
         turtle.digUp()
     end
-    os.sleep(0.01)
-    if turtle.detectUp() then
-        turtle.select(FILLER_SLOT)
-        turtle.placeUp()
+    if placement then
+        if not turtle.detectUp() then
+            fillUp()
+        end
     end
 end
 
-function processBlock()
+function processBlock(placement)
+    if placement == nil then placement = true end
     processLava()
     if checkBlock() then
         turtle.dig()
     end
-    os.sleep(0.01)
-    if turtle.detect() then
-        turtle.select(FILLER_SLOT)
-        turtle.place()
+    if placement then
+        if not turtle.detect() then
+            fill()
+        end
     end
 end
 
-function processBlockDown()
+function processBlockDown(placement)
+    if placement == nil then placement = true end
     processLavaDown()
     if checkBlockDown() then
         turtle.digDown()
     end
-    os.sleep(0.01)
-    if turtle.detectDown() then
-        turtle.select(FILLER_SLOT)
-        turtle.placeDown()
+    if placement then
+        if not turtle.detectDown() then
+            fillDown()
+        end
     end
 end
 
-function mineWalls()
+function mineWalls(placement)
+    if placement == nil then placement = true end
     down(false)
-    processBlockDown()
+    processBlockDown(placement)
     turnRight(false)
-    processBlock()
+    processBlock(placement)
     turnAround(false)
-    processBlock()
+    processBlock(placement)
     up(false)
-    processBlock()
+    processBlock(placement)
     turnAround(false)
-    processBlock()
+    processBlock(placement)
     up(false)
-    processBlock()
+    processBlock(placement)
     turnAround(false)
-    processBlock()
-    processBlockUp()
+    processBlock(placement)
+    processBlockUp(placement)
     turnRight(false)
     down(false)
 end
@@ -563,41 +612,48 @@ function clearInventoryAndRefuel()
     printPos()
 end
 
-init()
-savePosition("start", getTurtlePosition())
-turnRight(false)
-savePosition("chest", getFrontPosition())
-turnLeft(false)
+function placeTorch()
+    local orig_sel = turtle.getSelectedSlot()
+    turtle.select(TORCH_ID)
+    turtle.placeDown()
+    turtle.select(orig_sel)
+end
 
-repeat
-    repeat
-        mine()
-        if turtle_pos["x"] % 8 == 4 then
-            turtle.select(TORCH_ID)
-            turtle.placeDown()
-        end
-    until (turtle_pos["x"] >= target_pos["x"])
-    turnLeft()
-    mine()
-    rewind(2)
-    turnRight()
-    mine(4)
-    rewind()
-    turnRight()
-    repeat
-        mine()
-        if turtle_pos["x"] % 8 == 4 then
-            turtle.select(TORCH_ID)
-            turtle.placeDown()
-        end
-    until (turtle_pos["x"] <= 0)
-    turnRight()
-    mine()
-    rewind(2)
-    turnLeft()
-    mine(4)
-    rewind()
-    turnLeft()
-until (turtle_pos["z"] >= target_pos["z"])
-clearInventoryAndRefuel()
-printPos()
+------------------------------
+-- Lava Swim Functions
+-- These use a bucket to pickup lava move in then place it behind
+------------------------------
+function lavaSwim()
+    local orig_sel = turtle.getSelectedSlot()
+    turtle.select(BUCKET_SLOT)
+    turtle.place()
+    forward()
+    turnAround(false)
+    turtle.place()
+    turnAround(false)
+    turtle.select(orig_sel)
+end
+
+function lavaSwimUp()
+    local orig_sel = turtle.getselectedslot()
+    turtle.select(bucket_slot)
+    turtle.place()
+    forward()
+    turnaround(false)
+    turtle.place()
+    turnaround(false)
+    turtle.select(orig_sel)
+end
+
+function lavaSwimDown()
+    local orig_sel = turtle.getselectedslot()
+    turtle.select(bucket_slot)
+    turtle.place()
+    forward()
+    turnaround(false)
+    turtle.place()
+    turnaround(false)
+    turtle.select(orig_sel)
+end
+
+init()
