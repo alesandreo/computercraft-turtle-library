@@ -24,8 +24,8 @@ turnLeft(false)
 
 function createDropPoint()
     local og_slot = turtle.getSelectedSlot()
-    down()
-    down()
+    down(false)
+    down(false)
     processLavaDown()
     processLava()
     turnLeft(false)
@@ -34,10 +34,10 @@ function createDropPoint()
     processLava()
     turnLeft(false)
     processLava()
-    rewind()
+    up(false)
     turtle.select(CHEST_SLOT)
     turtle.placeDown()
-    rewind()
+    up(false)
     savePosition("active_chest", getTurtlePosition())
     chest_active = true
     turtle.select(og_slot)
@@ -45,7 +45,7 @@ end
 
 function dumpInventory()
     local og_slot = turtle.getSelectedSlot()
-    down()
+    down(false)
     for slot=1,12 do
         turtle.select(slot)
         if not turtle.dropDown() then
@@ -53,7 +53,7 @@ function dumpInventory()
             deletePosition("active_chest")
         end
     end
-    rewind()
+    up(false)
     turtle.select(og_slot)
 end
 
@@ -68,7 +68,7 @@ function cleanUpInventory()
             repeat
                 redo()
             until (comparePositions(turtle_pos, getPosition("resume")))
-            deletePosition("active_chest")
+            deletePosition("resume")
         else
             createDropPoint()
             dumpInventory()
@@ -77,7 +77,6 @@ function cleanUpInventory()
 end
 
 repeat
-    
     repeat
         mine()
         if turtle_pos["x"] % 8 == 4 then
@@ -90,10 +89,10 @@ repeat
     placeTorch()
     turnLeft()
     mine()
-    rewind(2)
+    rewind(2, false)
     turnRight()
     mine(4)
-    rewind()
+    rewind(1, false)
     turnRight()
     repeat
         mine()
@@ -104,10 +103,10 @@ repeat
     until (turtle_pos["x"] <= 0)
     turnRight()
     mine()
-    rewind(2)
+    rewind(2, false)
     turnLeft()
     mine(4)
-    rewind()
+    rewind(1, false)
     turnLeft()
 until (turtle_pos["z"] >= target_pos["z"])
 clearInventoryAndRefuel()
