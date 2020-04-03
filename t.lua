@@ -21,7 +21,7 @@ dig_whitelist = {}
 CHEST_SLOT = 13
 BUCKET_SLOT = 14
 FILLER_SLOT = 15
-TORCH_ID = 16
+TORCH_SLOT = 16
 CRUMBS = true
 
 dig_whitelist["minecraft:obsidian"] = true
@@ -161,13 +161,15 @@ function getFrontPosition()
     return v_turtle_pos
 end
 
-function turnToFace(target_facing)
+function turnToFace(target_facing, record)
+    if record == nil then record = true end
     if type(target_facing) == "string" then
         target_facing = getFaceFromString(target_facing)
     end
     while (getFace() ~= target_facing) do
-        turnLeft()
+        turnLeft(record)
     end
+    return true
 end
 
 function turnLeft(record)
@@ -246,20 +248,24 @@ function back(record)
 end
 
 function strafeLeft(record)
+    local return_value = true
     turnLeft(record)
-    forward(record)
+    return_value = forward(record)
     turnRight(record)
+    return return_value
 end
 
 function strafeRight(record)
+    local return_value = true
     turnRight(record)
-    forward(record)
+    return_value = forward(record)
     turnLeft(record)
+    return return_value
 end
 
 function turnAround(record)
     turnRight(record)
-    turnRight(record)
+    return turnRight(record)
 end
 
 function clearRedoTable()
@@ -269,39 +275,39 @@ function clearRedoTable()
 end
 
 function recordAction(action)
-    if redoing then
-    else
+    if not redoing then
         clearRedoTable()
     end
     table.insert(crumbs, action)
 end
 
-function rewind(numberOfMoves)
+function rewind(numberOfMoves, record)
+    local return_value = false
+    if record == nil then record = true end
     if CRUMBS then
         local numberOfMoves = numberOfMoves or 1
         local count = 0
         repeat
             count = count + 1
-            undoAction(table.remove(crumbs))
-        until ( count >= numberOfMoves )
-    else
-        return false
+            return_value = undoAction(table.remove(crumbs), record)
+        until ( count >= numberOfMoves or not return_value )
     end
+    return return_value
 end
 
 function redo(numberOfMoves)
+    local return_value = false
     if CRUMBS then
         local numberOfMoves = numberOfMoves or 1
         local count = 0
         redoing = true
         repeat
             count = count + 1
-            doAction(table.remove(redo_crumbs))
-        until ( count >= numberOfMoves )
+            return_value = doAction(table.remove(redo_crumbs))
+        until ( count >= numberOfMoves or not return_value )
         redoing = false
-    else
-        return false
     end
+    return return_value
 end
 
 function getOppositeAction(action)
@@ -336,10 +342,13 @@ function doAction(action, record)
     end
 end
 
-function undoAction(action)
+function undoAction(action, record)
+    if record == nil then record = true end
     local result
     result = doAction(getOppositeAction(action), false)
-    table.insert(redo_crumbs, action)
+    if record then
+        table.insert(redo_crumbs, action)
+    end
     return result
 end
 
@@ -396,6 +405,7 @@ function restockFillMaterial()
                     break
                 end
             end
+            os.sleep(1)
         end
     end
     turtle.select(orig_select)
@@ -461,9 +471,10 @@ function processLavaDown()
     end
 end
 
-function mine(count, placement)
+function mine(count, height, placement)
     count = count or 1
     if placement == nil then placement = true end
+    height = height or 3
     local counter=0
     repeat
         counter = counter + 1
@@ -496,7 +507,7 @@ function mine(count, placement)
         if turtle.detectDown() then
             turtle.digDown()
         end
-        mineWalls(placement)
+        mineWalls(height, placement)
         os.sleep(0.2)
     until (counter >= count)
 end
@@ -560,7 +571,7 @@ function mineOre()
     if checkBlockDown() then
         mineOreDown()
     end
-    rewind()
+    rewind(1, false)
     fill()
     stack = stack - 1
 end
@@ -601,7 +612,7 @@ function mineOreUp()
     if checkBlockDown() then
         mineOreDown()
     end
-    rewind()
+    rewind(1, false)
     fillUp()
     stack = stack - 1
 end
@@ -643,7 +654,7 @@ function mineOreDown()
     if checkBlockDown() then
         mineOreDown()
     end
-    rewind()
+    rewind(1, false)
     fillDown()
     stack = stack - 1
 end
@@ -687,31 +698,37 @@ function processBlockDown(placement)
     end
 end
 
-function mineWalls(placement)
+function processMineYLevel(placement)
+    for face=0,3 do
+        if face % 2 == 1 then
+            processBlock()
+            turnLeft(false)
+        end
+    end
+end
+
+function mineWalls(height, placement)
     if placement == nil then placement = true end
+    height = height or 3
+    local y_start = turtle_pos["y"]
+    local tar_y_pos = turtle_pos["y"] + height - 1
     down(false)
     processBlockDown(placement)
-    turnRight(false)
-    processBlock(placement)
-    turnAround(false)
-    processBlock(placement)
-    up(false)
-    processBlock(placement)
-    turnAround(false)
-    processBlock(placement)
-    up(false)
-    processBlock(placement)
-    turnAround(false)
-    processBlock(placement)
+    processMineYLevel(placement)
+    repeat
+        up(false)
+        processMineYLevel(placement)
+    until (turtle_pos["y"] >= tar_y_pos)
     processBlockUp(placement)
-    turnRight(false)
-    down(false)
+    repeat
+        down(false)
+    until (turtle_pos["y"] == y_start)
 end
 
 function emptyInventory()
     local og_slot = turtle.getSelectedSlot()
     turtle.select(CHEST_SLOT)
-    down()
+    down(false)
     turtle.digDown()
     turtle.placeDown()
     for slot=1,12 do
@@ -719,7 +736,7 @@ function emptyInventory()
         turtle.dropDown()
     end
     turtle.select(og_slot)
-    rewind()
+    up(false)
 end
 
 function clearInventoryAndRefuel()
@@ -738,7 +755,7 @@ function clearInventoryAndRefuel()
     turtle.refuel()
     turnLeft(false)
     turnLeft(false)
-    turtle.select(TORCH_ID)
+    turtle.select(TORCH_SLOT)
     turtle.suck()
     turtle.select(FILLER_SLOT)
     turtle.suck()
@@ -752,9 +769,45 @@ end
 
 function placeTorch()
     local orig_sel = turtle.getSelectedSlot()
-    turtle.select(TORCH_ID)
+    turtle.select(TORCH_SLOT)
     turtle.placeDown()
     turtle.select(orig_sel)
+end
+
+function processInventory()
+    local og_slot
+    local inventory = {}
+    local full = true
+    if turtle.getItemSpace(TORCH_SLOT) > 0 then
+        inventory[ turtle.getItemDetail(TORCH_SLOT).name] = TORCH_SLOT
+    end
+    if turtle.getItemSpace(FILLER_SLOT) > 0 then
+        inventory[ turtle.getItemDetail(FILLER_SLOT).name] = FILLER_SLOT
+    end
+    for slot=1,12 do
+        local slot_info = turtle.getItemDetail(slot)
+        if slot_info then
+            if turtle.getItemSpace(slot) > 0 then
+                if inventory[slot_info.name] then
+                    turtle.select(slot)
+                    turtle.transferTo(inventory[slot_info.name], turtle.getItemSpace(inventory[slot_info.name]))
+                    if turtle.getItemCount() > 0 then
+                        inventory[slot_info.name] = slot
+                    elseif turtle.getItemSpace(inventory[slot_info.name]) == 0 then
+                        inventory[slot_info.name] = nil
+                    end
+                    if turtle.getItemCount() == 0 then
+                        full = false
+                    end
+                else
+                    inventory[slot_info.name] = slot
+                end
+            end
+        else
+            full = false
+        end
+    end
+    return full
 end
 
 ------------------------------
