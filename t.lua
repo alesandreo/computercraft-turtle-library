@@ -396,6 +396,7 @@ function restockFillMaterial()
                     break
                 end
             end
+            os.sleep(1)
         end
     end
     turtle.select(orig_select)
@@ -755,6 +756,41 @@ function placeTorch()
     turtle.select(TORCH_ID)
     turtle.placeDown()
     turtle.select(orig_sel)
+end
+
+function processInventory()
+    local og_slot
+    local inventory = {}
+    local full = true
+    if turtle.getItemSpace(TORCH_ID) > 0 then
+        inventory[ turtle.getItemDetail(TORCH_ID).name] = TORCH_ID
+    end
+    if turtle.getItemSpace(FILLER_SLOT) > 0 then
+        inventory[ turtle.getItemDetail(FILLER_SLOT).name] = FILLER_SLOT
+    end
+    for slot=1,12 do
+        local slot_info = turtle.getItemDetail(slot)
+        if slot_info then
+            if turtle.getItemSpace(slot) > 0 then
+                if inventory[slot_info.name] then
+                    turtle.select(slot)
+                    turtle.transferTo(inventory[slot_info.name], turtle.getItemSpace(inventory[slot_info.name]))
+                    if turtle.getItemCount() > 0 then
+                        inventory[slot_info.name] = slot
+                    elseif turtle.getItemSpace(inventory[slot_info.name]) == 0 then
+                        inventory[slot_info.name] = nil
+                    end
+                    if turtle.getItemCount() == 0 then
+                        full = false
+                    end
+                else
+                    inventory[slot_info.name] = slot
+                end
+            end
+        else
+            full = false
+        end
+    end
 end
 
 ------------------------------
