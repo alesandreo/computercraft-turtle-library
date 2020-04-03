@@ -8,6 +8,11 @@
 
 dofile('/t.lua')
 
+target_pos = {}
+target_pos["x"] = 32
+target_pos["y"] = 15
+target_pos["z"] = 16
+
 savePosition("start", getTurtlePosition())
 turnRight(false)
 savePosition("chest", getFrontPosition())

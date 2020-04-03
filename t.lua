@@ -12,14 +12,13 @@ saved_positions = {}
 crumbs = {}
 redo_crumbs = {}
 redoing = false
-target_pos = {}
-target_pos["x"] = 25
-target_pos["y"] = 15
-target_pos["z"] = 25
+stack = 0
+MAX_STACK_DEPTH = 8
 
 dig_blacklist = {}
 dig_whitelist = {}
 
+CHEST_SLOT = 13
 BUCKET_SLOT = 14
 FILLER_SLOT = 15
 TORCH_ID = 16
@@ -27,6 +26,7 @@ CRUMBS = true
 
 dig_whitelist["minecraft:obsidian"] = true
 dig_whitelist["powah:dry_ice"] = true
+dig_whitelist["forbidden_arcanus:runestone"] = true
 
 function init()
     turtle_pos["x"] = 0
@@ -385,11 +385,11 @@ end
 
 function restockFillMaterial()
     local orig_select = turtle.getSelectedSlot()
-    local filler_space = turtle.getItemSpace()
+    local filler_space = turtle.getItemSpace(FILLER_SLOT)
     if filler_space > 0 then
-        if turtle.compareTo(FILLER_SLOT) then
-            for slot=1,13 do
-                turtle.select(slot)
+        for slot=1,12 do
+            turtle.select(slot)
+            if turtle.compareTo(FILLER_SLOT) then
                 turtle.transferTo(FILLER_SLOT, filler_space)
                 filler_space = turtle.getItemSpace()
                 if filler_space == 0 then
@@ -524,11 +524,128 @@ function checkBlockDown()
     return isBlockValuable(block_data)
 end
 
+function mineOre()
+    if stack >= MAX_STACK then
+        print("Maximum recursion reached.")
+        return true
+    end
+    stack = stack + 1
+    forward()
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLavaUp()
+    if checkBlockUp() then
+        mineOreUp()
+    end
+    if checkBlockDown() then
+        mineOreDown()
+    end
+    rewind()
+    fill()
+end
+
+function mineOreUp()
+    if stack >= MAX_STACK then
+        print("Maximum recursion reached.")
+        return true
+    end
+    stack = stack + 1
+    up()
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLavaUp()
+    if checkBlockUp() then
+        mineOreUp()
+    end
+    processLavaDown()
+    if checkBlockDown() then
+        mineOreDown()
+    end
+    rewind()
+    fillUp()
+end
+
+function mineOreDown()
+    if stack >= MAX_STACK then
+        print("Maximum recursion reached.")
+        return true
+    end
+    stack = stack + 1
+    down()
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    turnLeft(false)
+    processLava()
+    if checkBlock() then
+        mineOre()
+    end
+    processLava()
+    turnLeft(false)
+    processLavaUp()
+    if checkBlockUp() then
+        mineOreUp()
+    end
+    processLavaDown()
+    if checkBlockDown() then
+        mineOreDown()
+    end
+    rewind()
+    fillDown()
+end
+
 function processBlockUp(placement)
     if placement == nil then placement = true end
     processLavaUp()
     if checkBlockUp() then
-        turtle.digUp()
+        mineOreUp()
     end
     if placement then
         if not turtle.detectUp() then
@@ -541,7 +658,7 @@ function processBlock(placement)
     if placement == nil then placement = true end
     processLava()
     if checkBlock() then
-        turtle.dig()
+        mineOre()
     end
     if placement then
         if not turtle.detect() then
@@ -554,7 +671,7 @@ function processBlockDown(placement)
     if placement == nil then placement = true end
     processLavaDown()
     if checkBlockDown() then
-        turtle.digDown()
+        mineOreDown()
     end
     if placement then
         if not turtle.detectDown() then
@@ -582,6 +699,20 @@ function mineWalls(placement)
     processBlockUp(placement)
     turnRight(false)
     down(false)
+end
+
+function emptyInventory()
+    local og_slot = turtle.getSelectedSlot()
+    turtle.select(CHEST_SLOT)
+    down()
+    turtle.digDown()
+    turtle.placeDown()
+    for slot=1,12 do
+        turtle.select()
+        turtle.dropDown()
+    end
+    turtle.select(og_slot)
+    rewind()
 end
 
 function clearInventoryAndRefuel()
