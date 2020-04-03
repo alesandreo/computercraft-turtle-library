@@ -13,7 +13,7 @@ crumbs = {}
 redo_crumbs = {}
 redoing = false
 stack = 0
-MAX_STACK_DEPTH = 8
+MAX_STACK_DEPTH = 10
 
 dig_blacklist = {}
 dig_whitelist = {}
@@ -497,6 +497,7 @@ function mine(count, placement)
             turtle.digDown()
         end
         mineWalls(placement)
+        os.sleep(0.2)
     until (counter >= count)
 end
 
@@ -525,10 +526,11 @@ function checkBlockDown()
 end
 
 function mineOre()
-    if stack >= MAX_STACK then
+    if stack >= MAX_STACK_DEPTH then
         print("Maximum recursion reached.")
         return true
     end
+    os.sleep(stack/10.0)
     stack = stack + 1
     forward()
     processLava()
@@ -560,13 +562,15 @@ function mineOre()
     end
     rewind()
     fill()
+    stack = stack - 1
 end
 
 function mineOreUp()
-    if stack >= MAX_STACK then
+    if stack >= MAX_STACK_DEPTH then
         print("Maximum recursion reached.")
         return true
     end
+    os.sleep(stack/10.0)
     stack = stack + 1
     up()
     processLava()
@@ -599,13 +603,15 @@ function mineOreUp()
     end
     rewind()
     fillUp()
+    stack = stack - 1
 end
 
 function mineOreDown()
-    if stack >= MAX_STACK then
+    if stack >= MAX_STACK_DEPTH then
         print("Maximum recursion reached.")
         return true
     end
+    os.sleep(stack/10.0)
     stack = stack + 1
     down()
     processLava()
@@ -639,6 +645,7 @@ function mineOreDown()
     end
     rewind()
     fillDown()
+    stack = stack - 1
 end
 
 function processBlockUp(placement)
@@ -708,7 +715,7 @@ function emptyInventory()
     turtle.digDown()
     turtle.placeDown()
     for slot=1,12 do
-        turtle.select()
+        turtle.select(slot)
         turtle.dropDown()
     end
     turtle.select(og_slot)
