@@ -400,7 +400,7 @@ function restockFillMaterial()
             turtle.select(slot)
             if turtle.compareTo(FILLER_SLOT) then
                 turtle.transferTo(FILLER_SLOT, filler_space)
-                filler_space = turtle.getItemSpace()
+                filler_space = turtle.getItemSpace(FILLER_SLOT)
                 if filler_space == 0 then
                     break
                 end
@@ -698,15 +698,6 @@ function processBlockDown(placement)
     end
 end
 
-function processMineYLevel(placement)
-    for face=0,3 do
-        if face % 2 == 1 then
-            processBlock()
-            turnLeft(false)
-        end
-    end
-end
-
 function mineWalls(height, placement)
     if placement == nil then placement = true end
     height = height or 3
@@ -714,15 +705,21 @@ function mineWalls(height, placement)
     local tar_y_pos = turtle_pos["y"] + height - 1
     down(false)
     processBlockDown(placement)
-    processMineYLevel(placement)
-    repeat
-        up(false)
-        processMineYLevel(placement)
-    until (turtle_pos["y"] >= tar_y_pos)
+    turnRight(false)
+    processBlock(placement)
+    turnAround(false)
+    processBlock(placement)
+    up(false)
+    processBlock(placement)
+    turnAround(false)
+    processBlock(placement)
+    up(false)
+    processBlock(placement)
+    turnAround(false)
+    processBlock(placement)
     processBlockUp(placement)
-    repeat
-        down(false)
-    until (turtle_pos["y"] == y_start)
+    turnRight(false)
+    down(false)
 end
 
 function emptyInventory()
@@ -781,8 +778,8 @@ function processInventory()
     if turtle.getItemSpace(TORCH_SLOT) > 0 then
         inventory[ turtle.getItemDetail(TORCH_SLOT).name] = TORCH_SLOT
     end
-    if turtle.getItemSpace(FILLER_SLOT) > 0 then
-        inventory[ turtle.getItemDetail(FILLER_SLOT).name] = FILLER_SLOT
+    if turtle.getItemCount(FILLER_SLOT) > 0 then
+        inventory[turtle.getItemDetail(FILLER_SLOT).name] = FILLER_SLOT
     end
     for slot=1,12 do
         local slot_info = turtle.getItemDetail(slot)
