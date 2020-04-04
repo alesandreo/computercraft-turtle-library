@@ -16,11 +16,9 @@ target_pos["z"] = 16
 
 chests = {}
 savePosition("start", getTurtlePosition())
-turnRight(false)
 savePosition("active_chest", getTurtlePosition())
 chest_active = true
 
-turnLeft(false)
 
 function createDropPoint()
     local og_slot = turtle.getSelectedSlot()
@@ -86,7 +84,6 @@ repeat
             cleanUpInventory()
         end
     until (turtle_pos["x"] >= target_pos["x"])
-    placeTorch()
     turnLeft()
     mine()
     rewind(2, false)
@@ -99,6 +96,8 @@ repeat
         if turtle_pos["x"] % 8 == 4 then
             placeTorch()
             restockFillMaterial()
+        elseif turtle_pos["x"] % 8 == 5 then
+            cleanUpInventory()
         end
     until (turtle_pos["x"] <= 0)
     turnRight()
@@ -110,3 +109,4 @@ repeat
     turnLeft()
 until (turtle_pos["z"] >= target_pos["z"])
 clearInventoryAndRefuel()
+printPos()
