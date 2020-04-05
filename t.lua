@@ -535,12 +535,19 @@ function mine(count, height, placement)
         local present, block_data = turtle.inspectUp()
         if present then
             if string.find(block_data.name, 'water') then
+                up(false)
+                fill()
+                fillUp()
+                down(false)
                 fillUp()
             end
         end
         local present, block_data = turtle.inspectDown()
         if present then
             if string.find(block_data.name, 'water') then
+                down(false)
+                fill()
+                up(false)
                 fillDown()
             end
         end
