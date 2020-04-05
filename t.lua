@@ -67,6 +67,7 @@ function deleteTable(tab)
 end
 
 function savePosition(name, position)
+    position = position or getTurtlePosition()
     saved_positions[name] = shallowcopytable(position)
 end
 
@@ -305,12 +306,21 @@ function rewind(numberOfMoves, record)
     if CRUMBS then
         local numberOfMoves = numberOfMoves or 1
         local count = 0
+        local action = false
         repeat
             count = count + 1
-            return_value = undoAction(table.remove(crumbs), record)
-        until ( count >= numberOfMoves or not return_value )
+            action = table.remove(crumbs)
+            return_value = undoAction(action, record)
+        until ( count >= numberOfMoves or not action or not return_value )
     end
     return return_value
+end
+
+function rewindToPosition(position, record)
+    local return_value
+    repeat
+        return_value = rewind(1, record)
+    until (comparePositions(getTurtlePosition(), position) or return_value)
 end
 
 function redo(numberOfMoves)
@@ -328,39 +338,57 @@ function redo(numberOfMoves)
     return return_value
 end
 
+function resumeToPosition(position, record)
+    local return_value
+    repeat
+        return_value = redo()
+    until (comparePositions(getTurtlePosition(), position) or return_value)
+end
+
 function getOppositeAction(action)
-    if action == "turnLeft" then
+    if not action then error("No action passed to do action.") end
+    local lower_action = string.lower(action)
+    if lower_action == "turnleft" then
         return "turnRight"
-    elseif action == "turnRight" then
+    elseif lower_action == "turnright" then
         return "turnLeft"
-    elseif action == "up" then
+    elseif lower_action == "up" then
         return "down"
-    elseif action == "down" then
+    elseif lower_action == "down" then
         return "up"
-    elseif action == "forward" then
+    elseif lower_action == "forward" then
         return "back"
-    elseif action == "back" then
+    elseif lower_action == "back" then
         return "forward"
+    else
+        print("Invalid action passed: \"",action,"\"")
+        return false
     end
 end
 
 function doAction(action, record)
-    if action == "turnLeft" then
+    if not action then error("No action passed to do action.") end
+    local lower_action = string.lower(action)
+    if lower_action == "turnleft" then
         return turnLeft(record)
-    elseif action == "turnRight" then
+    elseif lower_action == "turnright" then
         return turnRight(record)
-    elseif action == "up" then
+    elseif lower_action == "up" then
         return up(record)
-    elseif action == "down" then
+    elseif lower_action == "down" then
         return down(record)
-    elseif action == "forward" then
+    elseif lower_action == "forward" then
         return forward(record)
-    elseif action == "back" then
+    elseif lower_action == "back" then
         return back(record)
+    else
+        print("Invalid action passed: \"",action,"\"")
+        return false
     end
 end
 
 function undoAction(action, record)
+    if not action then print("Passed nil as action to undo") return false end
     if record == nil then record = true end
     local result
     result = doAction(getOppositeAction(action), false)
@@ -800,7 +828,7 @@ function emptyInventory()
 end
 
 function clearInventoryAndRefuel()
-    savePosition("resume",getTurtlePosition())
+    savePosition("resume")
     repeat
         rewind()
     until (comparePositions(turtle_pos, getPosition("start")))
@@ -852,11 +880,13 @@ function processInventory()
     local og_slot
     local inventory = {}
     local full = true
-    if turtle.getItemSpace(TORCH_SLOT) > 0 then
-        inventory[ turtle.getItemDetail(TORCH_SLOT).name] = TORCH_SLOT
+    local torch_data = turtle.getItemDetail(TORCH_SLOT)
+    local filler_data = turtle.getItemDetail(FILLER_SLOT)
+    if torch_data and turtle.getItemSpace(TORCH_SLOT) > 0 then
+        inventory[ torch_data.name] = TORCH_SLOT
     end
-    if turtle.getItemCount(FILLER_SLOT) > 0 then
-        inventory[turtle.getItemDetail(FILLER_SLOT).name] = FILLER_SLOT
+    if filler_data and turtle.getItemCount(FILLER_SLOT) > 0 then
+        inventory[filler_data.name] = FILLER_SLOT
     end
     for slot=1,12 do
         local slot_info = turtle.getItemDetail(slot)
