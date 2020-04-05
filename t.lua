@@ -35,6 +35,7 @@ filler_whitelist["minecraft:granite"] = true
 filler_whitelist["minecraft:diorite"] = true
 filler_whitelist["minecraft:andesite"] = true
 filler_whitelist["embellishcraft:basalt_cobblestone"] = true
+filler_whitelist["rftoolsbase:dimensionalshard_overworld"] = true
 
 
 function init()
