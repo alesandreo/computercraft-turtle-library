@@ -17,6 +17,7 @@ MAX_STACK_DEPTH = 10
 
 dig_blacklist = {}
 dig_whitelist = {}
+filler_whitelist = {}
 
 CHEST_SLOT = 13
 BUCKET_SLOT = 14
@@ -27,6 +28,14 @@ CRUMBS = true
 dig_whitelist["minecraft:obsidian"] = true
 dig_whitelist["powah:dry_ice"] = true
 dig_whitelist["forbidden_arcanus:runestone"] = true
+
+filler_whitelist["minecraft:cobblestone"] = true
+filler_whitelist["minecraft:dirt"] = true
+filler_whitelist["minecraft:granite"] = true
+filler_whitelist["minecraft:diorite"] = true
+filler_whitelist["minecraft:andesite"] = true
+filler_whitelist["embellishcraft:basalt_cobblestone"] = true
+
 
 function init()
     turtle_pos["x"] = 0
@@ -193,8 +202,11 @@ end
 function up(record)
     if record == nil then record = true end
     if record then record = CRUMBS end
-    if turtle.detectUp() then
+    local count = 0
+    while turtle.detectUp() and count <= 10 do
         turtle.digUp()
+        os.sleep(0.1)
+        count = count + 1
     end
     if turtle.up() then
         if record then recordAction("up") end
@@ -208,8 +220,11 @@ end
 function down(record)
     if record == nil then record = true end
     if record then record = CRUMBS end
-    if turtle.detectDown() then
+    local count = 0
+    while turtle.detectDown() and count <= 10 do
         turtle.digDown()
+        os.sleep(0.1)
+        count = count + 1
     end
     if turtle.down() then
         if record then recordAction("down") end
@@ -223,8 +238,10 @@ end
 function forward(record)
     if record == nil then record = true end
     if record then record = CRUMBS end
-    if turtle.detect() then
+    local count = 0
+    while turtle.detect() and count <= 10 do
         turtle.dig()
+        count = count + 1
     end
     if turtle.forward() then
         if record then recordAction("forward") end
@@ -361,6 +378,14 @@ function printPos(_position)
     print(getPositionString(_position))
 end
 
+function checkFillWhiteList(block_name)
+    if filler_whitelist[block_name] then
+        return true
+    else
+        return false
+    end
+end
+
 function checkWhiteList(block_name)
     if dig_whitelist[block_name] then
         return true
@@ -393,8 +418,18 @@ function isBlockValuable(block_data)
 end
 
 function restockFillMaterial()
+    local slot_data
     local orig_select = turtle.getSelectedSlot()
     local filler_space = turtle.getItemSpace(FILLER_SLOT)
+    if turtle.getItemCount(FILLER_SLOT) == 0 then
+        for slot=1,12 do
+             slot_data = turtle.getItemDetail(slot)
+            if slot_data and checkFillWhiteList(slot_data.name) then
+                turtle.select(slot)
+                turtle.transferTo(FILLER_SLOT)
+            end
+        end
+    end
     if filler_space > 0 then
         for slot=1,12 do
             turtle.select(slot)
@@ -415,6 +450,9 @@ function fill()
     local orig_select = turtle.getSelectedSlot()
     turtle.select(FILLER_SLOT)
     turtle.place()
+    if turtle.getItemCount() == 0 then
+        restockFillMaterial()
+    end
     turtle.select(orig_select)
 end
 
@@ -422,6 +460,9 @@ function fillUp()
     local orig_select = turtle.getSelectedSlot()
     turtle.select(FILLER_SLOT)
     turtle.placeUp()
+    if turtle.getItemCount() == 0 then
+        restockFillMaterial()
+    end
     turtle.select(orig_select)
 end
 
@@ -429,6 +470,9 @@ function fillDown()
     local orig_select = turtle.getSelectedSlot()
     turtle.select(FILLER_SLOT)
     turtle.placeDown()
+    if turtle.getItemCount() == 1 then
+        restockFillMaterial()
+    end
     turtle.select(orig_select)
 end
 
@@ -472,6 +516,7 @@ function processLavaDown()
 end
 
 function mine(count, height, placement)
+    turtle.select(1)
     count = count or 1
     if placement == nil then placement = true end
     height = height or 3
@@ -698,6 +743,16 @@ function processBlockDown(placement)
     end
 end
 
+function processLevel()
+    local facing = getFace()
+    repeat
+        processLava()
+        processBlock()
+        turnLeft(false)
+    until (facing == getFace())
+    return true
+end
+
 function mineWalls(height, placement)
     if placement == nil then placement = true end
     height = height or 3
@@ -764,7 +819,21 @@ function clearInventoryAndRefuel()
     printPos()
 end
 
+function placeTorchUp()
+    local orig_sel = turtle.getSelectedSlot()
+    turtle.select(TORCH_SLOT)
+    turtle.placeUp()
+    turtle.select(orig_sel)
+end
+
 function placeTorch()
+    local orig_sel = turtle.getSelectedSlot()
+    turtle.select(TORCH_SLOT)
+    turtle.place()
+    turtle.select(orig_sel)
+end
+
+function placeTorchDown()
     local orig_sel = turtle.getSelectedSlot()
     turtle.select(TORCH_SLOT)
     turtle.placeDown()

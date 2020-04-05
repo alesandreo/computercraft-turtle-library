@@ -78,7 +78,7 @@ repeat
     repeat
         mine()
         if turtle_pos["x"] % 8 == 4 then
-            placeTorch()
+            placeTorchDown()
             restockFillMaterial()
         elseif turtle_pos["x"] % 8 == 5 then
             cleanUpInventory()
@@ -94,7 +94,7 @@ repeat
     repeat
         mine()
         if turtle_pos["x"] % 8 == 4 then
-            placeTorch()
+            placeTorchDown()
             restockFillMaterial()
         elseif turtle_pos["x"] % 8 == 5 then
             cleanUpInventory()

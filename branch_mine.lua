@@ -14,6 +14,8 @@ mine_height = 5
 
 chest_active = false
 
+direction = "right"
+
 function createDropPoint()
     local og_slot = turtle.getSelectedSlot()
     down(false)
@@ -26,6 +28,7 @@ function createDropPoint()
     processLava()
     turnLeft(false)
     processLava()
+    turnLeft(false)
     up(false)
     turtle.select(CHEST_SLOT)
     turtle.placeDown()
@@ -68,7 +71,7 @@ function cleanUpInventory()
     end
 end
 
-function trunk(count)
+function trunk(count, action)
     count = count or 1
     local counter=0
     repeat
@@ -76,24 +79,24 @@ function trunk(count)
     forward()
     down(false)
     processBlockDown()
-    turnRight(false)
+    doAction(action, false)
     processBlock()
     for i=1,mine_height do
         up(false)
         processBlock()
     end
     processBlockUp()
-    turnAround(false)
-    forward(false)
-    processBlockUp()
-    processBlock()
+--    turnAround(false)
+--    forward(false)
+--    processBlockUp()
+--    processBlock()
     for i=1,mine_height do
         down(false)
-        processBlock()
+--        processBlock()
     end
     processBlockDown()
-    back(false)
-    turnRight(false)
+--    back(false)
+    undoAction(action, false)
     up(false)
     until (counter >= count)
 end
@@ -104,30 +107,88 @@ function mineBranch(length, refill)
     savePosition("branch_point", getTurtlePosition())
     for space=1,length do
         mine()
+        if space % 4 == 0 then
+            processInventory()
+        end
         if space % 8 == 4 then
-            placeTorch()
+            placeTorchDown()
             restockFillMaterial()
         elseif space % 8 == 5 then
             cleanUpInventory()
         end
     end
     repeat
+        if refill then
+            fill()
+            fillUp()
+            turtle.digDown()
+            fillDown()
+        end
         rewind(1, false)
     until (comparePositions(turtle_pos, getPosition("branch_point")))
+    deletePosition("branch_point")
 end
 
-function mineBranchLeft(length)
+function mineBranchLeft(length, refill)
     length = length or branch_length
     turnLeft()
-    forward()
-    mineBranch(length)
+    mineBranch(length, refill)
+    down()
+    down()
+    down()
+    fillUp()
+    down()
+    mineBranch(length, refill)
+    rewind(4, false)
+    up()
+    up()
+    up()
+    fillDown()
+    up()
+    mineBranch(length, refill)
+    rewind(5, false)
+end
 
+function mineBranchRight(length, refill)
+    length = length or branch_length
+    turnRight()
+    mineBranch(length, refill)
+    down()
+    down()
+    down()
+    fillUp()
+    down()
+    mineBranch(length, refill)
+    rewind(4, false)
+    up()
+    up()
+    up()
+    fillDown()
+    up()
+    mineBranch(length, refill)
+    rewind(5, false)
 end
 
 savePosition("start", getTurtlePosition())
 createDropPoint()
 
+
 repeat
-    trunk(3)
+    if direction == "right" then
+        trunk(2, "turnRight")
+        if turtle_pos["x"] % 6 == 2 then
+            turnRight(false)
+            placeTorchUp()
+            turnLeft(false)
+        end
+        trunk(1, "turnRight")
+        mineBranchRight(branch_length, false)
+        cleanUpInventory()
+    elseif direction == "left" then
+        trunk(3, "turnLeft")
+        mineBranchLeft(branch_length, false)
+        cleanUpInventory()
+    end
+until ( turtle_pos["x"] > trunk_length )
 
 
