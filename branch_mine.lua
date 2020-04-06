@@ -190,7 +190,6 @@ function mineApporpriateBranch(length, refill)
     mineFullBranch(length, refill)
     rewindToPosition(getPosition("main_branch_point"), false)
     deletePosition("main_branch_point")
-    rewind(1, false)
 end
 
 savePosition("start")
@@ -208,5 +207,3 @@ repeat
     mineApporpriateBranch(branch_length, false)
     cleanUpInventory()
 until ( turtle_pos["x"] > trunk_length )
-
-
