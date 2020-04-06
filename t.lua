@@ -308,12 +308,17 @@ end
 function back(record)
     if record == nil then record = true end
     if record then record = CRUMBS end
+    local ret_val
     if turtle.back() then
         if record then recordAction("back") end
         adjustPostion(-1)
         return true
     else
-        return false
+        turnAround(false)
+        ret_val = forward(false)
+        turnAround(false)
+        if record then recordAction("back") end
+        return ret_val
     end
 end
 
