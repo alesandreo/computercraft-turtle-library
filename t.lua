@@ -7,6 +7,13 @@
 --
 --module "t"
 --turtle = require "turtle"
+
+log_level = "info"
+log_category = {}
+log_category["log"] = log_level
+--log_category["breadcrumbs"] = "debug"
+--log_category["compare_positions"] = "trace"
+
 turtle_pos = {}
 saved_positions = {}
 crumbs = {}
@@ -59,6 +66,38 @@ function shallowcopytable(orig)
     return copy
 end
 
+function getLogLevel(level)
+    level = string.lower(level)
+    if level == "fatal" then
+        return 0
+    elseif level == "error" then
+        return 1
+    elseif level == "warn" then
+        return 2
+    elseif level == "info" then
+        return 3
+    elseif level == "debug" then
+        return 4
+    elseif level == "trace" then
+        return 5
+    end
+end
+
+function getCategoryLevel(category)
+    category = category or "log"
+    return log_category[category] or log_category["log"]
+end
+
+function log(message, level, category)
+    level = level or "info"
+    category = category or "log"
+    if getLogLevel(level) <= getLogLevel(getCategoryLevel(category)) then
+        print(string.upper(level)..": "..message)
+        return true
+    end
+    return true
+end
+
 function deleteTable(tab)
     for k, v in pairs(tab) do
         tab[k] = nil
@@ -68,32 +107,44 @@ end
 
 function savePosition(name, position)
     position = position or getTurtlePosition()
+    if saved_positions[name] then error("Position "..name.." is already saved.") end
     saved_positions[name] = shallowcopytable(position)
 end
 
 function deletePosition(name)
+    if not getPosition(name) then error("Position "..name.." doesn't exist.") end
     deleteTable(getPosition(name))
+    saved_positions[name] = nil
+    return (not saved_positions[name])
 end
 
 function getPosition(name)
-    return saved_positions[name]
+    local pos = saved_positions[name]
+    if not pos then error("No position named: "..name) end
+    return pos
 end
 
 function comparePositions(_position_one, _position_two)
+    if not _position_one then error("_position_one is nil.") end
+    if not _position_two then error("_position_two is nil.") end
+    log("x: ".._position_one["x"].."<>".._position_two["x"], "trace", "compare_positions")
+    log("y: ".._position_one["y"].."<>".._position_two["y"], "trace", "compare_positions")
+    log("z: ".._position_one["z"].."<>".._position_two["z"], "trace", "compare_positions")
+    log("face: "..getFace(_position_one["face"]).."<>"..getFace(_position_two["face"]), "trace", "compare_positions")
     if _position_one["x"] ~= _position_two["x"] then
---        print("x",_position_one["x"],_position_two["x"])
+        log("x: ".._position_one["x"].."<>".._position_two["x"], "trace", "compare_positions")
         return false
     end
     if _position_one["y"] ~= _position_two["y"] then
---        print("y",_position_one["y"],_position_two["y"])
+        log("y: ".._position_one["y"].."<>".._position_two["y"], "trace", "compare_positions")
         return false
     end
     if _position_one["z"] ~= _position_two["z"] then
---        print("z",_position_one["z"],_position_two["z"])
+        log("z: ".._position_one["z"].."<>".._position_two["z"], "trace", "compare_positions")
         return false
     end
     if getFace(_position_one["face"]) ~= getFace(_position_two["face"]) then
---        print("face",getFace(_position_one["face"]),getFace(_position_two["face"]))
+        log("face: "..getFace(_position_one["face"]).."<>"..getFace(_position_two["face"]), "trace", "compare_positions")
         return false
     end
     return true
@@ -310,17 +361,24 @@ function rewind(numberOfMoves, record)
         repeat
             count = count + 1
             action = table.remove(crumbs)
-            return_value = undoAction(action, record)
-        until ( count >= numberOfMoves or not action or not return_value )
+            if action then
+                log("Rewinding: "..action, "debug", 'breadcrumbs')
+                return_value = undoAction(action, record)
+            else
+                log("Rewinding: nil", "debug", 'breadcrumbs')
+                return_value = false
+            end
+        until ((count >= numberOfMoves) or (not return_value))
     end
     return return_value
 end
 
 function rewindToPosition(position, record)
     local return_value
+    if record == nil then record = true end
     repeat
         return_value = rewind(1, record)
-    until (comparePositions(getTurtlePosition(), position) or return_value)
+    until ((not return_value) or (comparePositions(turtle_pos, position)))
 end
 
 function redo(numberOfMoves)
@@ -328,21 +386,30 @@ function redo(numberOfMoves)
     if CRUMBS then
         local numberOfMoves = numberOfMoves or 1
         local count = 0
+        local action
         redoing = true
         repeat
             count = count + 1
-            return_value = doAction(table.remove(redo_crumbs))
-        until ( count >= numberOfMoves or not return_value )
+            action = table.remove(redo_crumbs)
+            if action then
+                log("Redoing: "..action, "debug", 'breadcrumbs')
+                return_value = doAction(action)
+            else
+                log("Redoing: nil", "debug", 'breadcrumbs')
+                return_value = false
+            end
+        until ( (count >= numberOfMoves) or (not return_value) )
         redoing = false
     end
     return return_value
 end
 
 function resumeToPosition(position, record)
+    if record == nil then record = true end
     local return_value
     repeat
         return_value = redo()
-    until (comparePositions(getTurtlePosition(), position) or return_value)
+    until ((comparePositions(turtle_pos, position)) or (not return_value))
 end
 
 function getOppositeAction(action)
@@ -361,7 +428,7 @@ function getOppositeAction(action)
     elseif lower_action == "back" then
         return "forward"
     else
-        print("Invalid action passed: \"",action,"\"")
+        error("Invalid action passed: \"",action,"\"")
         return false
     end
 end
@@ -382,13 +449,13 @@ function doAction(action, record)
     elseif lower_action == "back" then
         return back(record)
     else
-        print("Invalid action passed: \"",action,"\"")
+        error("Invalid action passed: \"",action,"\"")
         return false
     end
 end
 
 function undoAction(action, record)
-    if not action then print("Passed nil as action to undo") return false end
+    if not action then error("Passed nil as action to undo") return false end
     if record == nil then record = true end
     local result
     result = doAction(getOppositeAction(action), false)
@@ -579,7 +646,7 @@ function mine(count, height, placement)
                 fillDown()
             end
         end
-        printPos()
+        log("Turtle position: "..getPositionString(), "debug", "mine")
         processLavaUp()
         processLavaDown()
         if turtle.detectUp() then
@@ -619,7 +686,7 @@ end
 
 function mineOre()
     if stack >= MAX_STACK_DEPTH then
-        print("Maximum recursion reached.")
+        log("Maximum recursion reached.", "debug", "mine")
         return true
     end
     os.sleep(stack/10.0)
@@ -659,7 +726,7 @@ end
 
 function mineOreUp()
     if stack >= MAX_STACK_DEPTH then
-        print("Maximum recursion reached.")
+        log("Maximum recursion reached.", "debug", "mine")
         return true
     end
     os.sleep(stack/10.0)
@@ -700,7 +767,7 @@ end
 
 function mineOreDown()
     if stack >= MAX_STACK_DEPTH then
-        print("Maximum recursion reached.")
+        log("Maximum recursion reached.", "debug", 'mine')
         return true
     end
     os.sleep(stack/10.0)
@@ -832,7 +899,7 @@ function clearInventoryAndRefuel()
     repeat
         rewind()
     until (comparePositions(turtle_pos, getPosition("start")))
-    printPos()
+    log(getPositionString(), "debug", "inventory")
     for slot=1,12 do
             turtle.select(slot)
             turtle.dropDown()
@@ -852,7 +919,7 @@ function clearInventoryAndRefuel()
         redo()
     until (comparePositions(turtle_pos, getPosition("resume")))
     deletePosition("resume")
-    printPos()
+    log(getPositionString(), "debug", "inventory")
 end
 
 function placeTorchUp()

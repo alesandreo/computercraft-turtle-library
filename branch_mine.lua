@@ -102,6 +102,7 @@ function processBranchInventory()
             rewindToPosition(getPosition("main_branch_point"))
             cleanUpInventory()
             resumeToPosition(getPosition("process_branch_inventory_resume"))
+            deletePosition("process_branch_inventory_resume")
         else
             cleanUpInventory()
         end
@@ -111,7 +112,7 @@ end
 function mineBranch(length, refill)
     length = length or branch_length
     if refill == nil then refill = false end
-    savePosition("branch_point", getTurtlePosition())
+    savePosition("branch_point")
     for space=1,length do
         mine()
         if space % 4 == 0 then
@@ -155,7 +156,7 @@ function mineUpperBranch(length, refill)
     mineBranch(length, refill)
     rewind(4, false) -- 16 --> 15 --> 14 --> 13
     fillUp()
-    rewindToPosition("main_branch_point", false)
+    rewindToPosition(getPosition("main_branch_point"), false)
 end
 
 function mineLowerBranch(length, refill)
@@ -173,7 +174,7 @@ function mineLowerBranch(length, refill)
     mineBranch(length, refill)
     rewind(4, false) --8 --> 9 --> 10 --> 11
     fillDown()
-    rewindToPosition("main_branch_point", false)
+    rewindToPosition(getPosition("main_branch_point"), false)
 end
 
 function mineFullBranch(length, refill)
@@ -184,11 +185,12 @@ end
 
 function mineApporpriateBranch(length, refill)
     length = length or branch_length
-    savePosition("main_branch_point")
     doAction(directionAction)
+    savePosition("main_branch_point")
     mineFullBranch(length, refill)
-    rewindToPosition("main_branch_point", false)
+    rewindToPosition(getPosition("main_branch_point"), false)
     deletePosition("main_branch_point")
+    rewind(1, false)
 end
 
 savePosition("start")
