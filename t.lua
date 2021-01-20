@@ -25,6 +25,9 @@ MAX_STACK_DEPTH = 10
 dig_blacklist = {}
 dig_whitelist = {}
 filler_whitelist = {}
+flag_whitelist = {}
+dig_whitelist_tags = {}
+dig_blacklist_tags = {}
 
 CHEST_SLOT = 13
 BUCKET_SLOT = 14
@@ -32,9 +35,13 @@ FILLER_SLOT = 15
 TORCH_SLOT = 16
 CRUMBS = true
 
+ore_flagged = false
+
+dig_whitelist_tags["forge:ores"] = true
 dig_whitelist["minecraft:obsidian"] = true
 dig_whitelist["powah:dry_ice"] = true
 dig_whitelist["forbidden_arcanus:runestone"] = true
+dig_whitelist["druidcraft:fiery_glass_ore"] = true
 
 filler_whitelist["minecraft:cobblestone"] = true
 filler_whitelist["minecraft:dirt"] = true
@@ -487,7 +494,21 @@ function checkFillWhiteList(block_name)
     end
 end
 
-function checkWhiteList(block_name)
+function checkOreFlag()
+    return ore_flagged
+end
+
+function clearOreFlag()
+    ore_flagged = false
+end
+
+function checkWhiteList(block_data)
+    block_name = block_data["name"]
+    for tag, bl in pairs(block_data.tags) do
+        if bl and dig_whitelist_tags[tag] then
+            return true
+        end
+    end
     if dig_whitelist[block_name] then
         return true
     else
@@ -495,7 +516,17 @@ function checkWhiteList(block_name)
     end
 end
 
-function checkBlackList(block_name)
+function checkBlackList(block_data)
+    block_name = block_data["name"]
+    for tag, bl in pairs(block_data.tags) do
+        if bl and dig_blacklist_tags[tag] then
+            return true
+        end
+    end
+    if flag_whitelist[block_name] then
+        ore_flagged = true
+        return true
+    end
     if dig_blacklist[block_name] then
         return true
     else
@@ -504,15 +535,11 @@ function checkBlackList(block_name)
 end
 
 function isBlockValuable(block_data)
-    local block_name = block_data.name
     local valuable = false
-    if string.find(block_name, "_ore") then
+    if checkWhiteList(block_data) then
         valuable = true
     end
-    if checkWhiteList(block_name) then
-        valuable = true
-    end
-    if checkBlackList(block_name) then
+    if checkBlackList(block_data) then
         valuable = false
     end
     return valuable
