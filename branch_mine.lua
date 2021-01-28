@@ -5,16 +5,22 @@
 -- Time: 4:07 PM
 -- To change this template use File | Settings | File Templates.
 --
+if not fs.exists("t.lua") then
+    shell.run("pastebin get Gg3PGyUn t.lua")
+end
 
 dofile("t.lua")
 
-trunk_length = 32
+trunk_length = 27
 branch_length = 15
 mine_height = 5
 
 chest_active = false
 
-directionAction = "turnRight"
+directionAction = "turnLeft"
+
+--flag_whitelist["minecraft:emerald_ore"] = true
+--flag_whitelist["minecraft:diamond_ore"] = true
 
 function createDropPoint()
     local og_slot = turtle.getSelectedSlot()
@@ -58,7 +64,7 @@ function cleanUpInventory()
             savePosition("cleanup_resume")
             repeat
                 rewind()
-            until (comparePositions(turtle_pos, getPosition("active_chest")))
+            until (( not chest_active) or comparePositions(turtle_pos, getPosition("active_chest")))
             dumpInventory()
             repeat
                 redo()
@@ -76,22 +82,22 @@ function trunk(count, action)
     local counter=0
     repeat
         counter = counter+1
-    forward()
-    down(false)
-    processBlockDown()
-    doAction(action, false)
-    processBlock()
-    for i=1,mine_height do
-        up(false)
-        processBlock()
-    end
-    processBlockUp()
-    for i=1,mine_height do
+        forward()
         down(false)
-    end
-    processBlockDown()
-    undoAction(action, false)
-    up(false)
+        processBlockDown()
+        doAction(action, false)
+        processBlock()
+        for i=1,mine_height do
+            up(false)
+            processBlock()
+        end
+        processBlockUp()
+        for i=1,mine_height do
+            down(false)
+        end
+        processBlockDown()
+        undoAction(action, false)
+        up(false)
     until (counter >= count)
 end
 
@@ -181,6 +187,10 @@ function mineFullBranch(length, refill)
     mineBranch(length, refill)
     mineUpperBranch(length-1, refill)
     mineLowerBranch(length-1, refill)
+    if checkOreFlag() then
+        placeTorchDown()
+        clearOreFlag()
+    end
 end
 
 function mineApporpriateBranch(length, refill)
@@ -197,8 +207,8 @@ createDropPoint()
 
 
 repeat
-    trunk(2, directionAction)
-    if turtle_pos["x"] % 6 == 2 and string.lower(directionAction) == "turnright" then
+    trunk(3, directionAction)
+    if turtle_pos["x"] % 8 == 3 and string.lower(directionAction) == "turnright" then
         turnRight(false)
         placeTorchUp()
         turnLeft(false)
