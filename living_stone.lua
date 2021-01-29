@@ -7,6 +7,7 @@ target_list = {}
 target_list["botania:livingrock"] = true
 target_list["botania:livingwood"] = true
 placeable_list = {}
+placeable_list["minecraft:birch_log"] = true
 placeable_tag_list = {}
 placeable_tag_list["minecraft:logs"] = true
 
@@ -35,11 +36,11 @@ function is_placeable(block_data)
         if placeable_list[block_data["name"]] then
             return true
         end
-        for tag, bl in pairs(block_data.tags) do
-            if (bl and placeable_tag_list) then
-                return true
-            end
-        end
+--        for tag, bl in pairs(block_data.tags) do
+--            if (bl and placeable_tag_list[tag]) then
+--                return true
+--            end
+--        end
     end
     return false
 end
@@ -55,7 +56,7 @@ end
 
 function clean_inventory()
     for slot=1,16 do
-        if in_target_list(turtle.getItemDetail(slot)["name"]) then
+        if turtle.getItemCount(slot) > 0 and in_target_list(turtle.getItemDetail(slot)["name"]) then
             turtle.select(slot)
             turtle.dropDown()
         end
@@ -96,6 +97,7 @@ function check_location()
                 turtle.placeUp()
             end
         end
+        os.sleep(5)
         turtle.down()
     end
     if turtle.detectDown() then
@@ -103,7 +105,8 @@ function check_location()
     end
 end
 
-while true do
+while turtle.getFuelLevel() > 100 do
     move()
     check_location()
+    os.sleep(0.5)
 end
