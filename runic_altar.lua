@@ -1,12 +1,12 @@
 --
 -- Created by IntelliJ IDEA.
--- User: amcconaughey
--- Date: 2/3/21
--- Time: 2:09 PM
+-- User: amcco
+-- Date: 2/7/2021
+-- Time: 10:34 PM
 -- To change this template use File | Settings | File Templates.
 --
 
-crafting_station = peripheral.wrap("back")
+crafting_station = peripheral.wrap("top")
 input_inventory = peripheral.wrap("left")
 output_inventory = peripheral.wrap("right")
 
@@ -30,20 +30,34 @@ recipes["powah:steel_energized"] = {
         }
     }
 }
-recipes["powah:crystal_blazing"] = {
+
+recipes["botania:rune_mana"] = {
     inputs = {
         {
-            count = 1,
-            name = "minecraft:emerald"
-        }
-    },
-    outputs = {
+            count = 5,
+            name = "botania:manasteel_ingot"
+        },
         {
             count = 1,
-            name = "powah:crystal_spirited"
+            name = "botania:mana_pearl"
         }
+    },
+    catalyst = {
+        count = 1,
+        name = "botania:livingrock"
     }
 }
+
+function pulse_redstone(side, length, strength)
+    if not length then length = 0.1 end
+    if not strength then strength = 15 end
+    local current_strength = redstone.getAnalogOutput(side)
+    redstone.setAnalogOutput(side, strength)
+    os.sleep(length)
+    redstone.setAnalogOutput(side, current_strength)
+    return current_strength
+end
+
 
 function get_slot(inventory, name)
     for slot_number, item_data in ipairs(inventory.list()) do
@@ -118,6 +132,12 @@ function insert_ingredients(in_inventory, cs_inv, recipe)
     return true
 end
 
+function craft_rune(in_inv, cs_inv, recipe)
+    transfer_item(in_inv, cs_inv, recipe.catalyst.name, recipe.catalyst.count)
+    os.sleep(3)
+    pulse_redstone("right", 1, 15)
+end
+
 function transfer_output(cs_inv, out_inv, recipe)
     print("Transferring outputs from "..peripheral.getName(cs_inv).." to "..peripheral.getName(out_inv))
     if recipe and check_output(cs_inv, recipe) then
@@ -128,20 +148,17 @@ function transfer_output(cs_inv, out_inv, recipe)
 end
 
 function craft_recipe(recipe)
-    while check_stock(input_inventory, recipe) or not check_empty(crafting_station) do
-        if check_empty(crafting_station) then
+    while check_stock(input_inventory, recipe) or redstone.getAnalogOutput("back") > 0 do
+        if redstone.getAnalogInput("back") == 0 then
             if check_stock(input_inventory, recipe) then
                 insert_ingredients(input_inventory, crafting_station, recipe)
             end
         else
-            if check_output(crafting_station, recipe) then
-                transfer_output(crafting_station, output_inventory, recipe)
+            if redstone.getAnalogInput("back") == 2 then
+                craft_rune(input_inventory, crafting_station, recipe)
             end
         end
         os.sleep(10)
     end
 end
-
-
-test_recipe = recipes["powah:steel_energized"]
-craft_recipe(recipes["powah:crystal_blazing"])
+craft_recipe(recipes["botania:rune_mana"])
