@@ -1,0 +1,2 @@
+-- https://pastebin.com/vr5qBvMP
+-- AR Functions to come.

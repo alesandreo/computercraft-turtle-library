@@ -116,6 +116,10 @@ Libraries = {
         paste_bin = "iEcuJ70J"
     },
     {
+        file_path = "lib/ale/ar.lua",
+        paste_bin = "vr5qBvMP"
+    },
+    {
         file_path = "lib/ale/ale.lua",
         paste_bin = "x1LfzQNz"
     },
@@ -136,6 +140,10 @@ Libraries = {
         paste_bin = "mZYfaWLA"
     },
     {
+        file_path = "lib/ale/utils.lua",
+        paste_bin = "PEVfiaAa"
+    },
+    {
         file_path = "install.lua",
         paste_bin = "hGkQUxWF"
     },
@@ -144,4 +152,8 @@ Libraries = {
 for k, lib in pairs(Libraries) do
     Lib = Library:new(lib)
     Lib:refresh()
+end
+
+if not require('lib.ale.ale') then
+    error("Failed to properly install.")
 end
