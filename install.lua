@@ -147,6 +147,10 @@ Libraries = {
         file_path = "install.lua",
         paste_bin = "hGkQUxWF"
     },
+    {
+        file_path = 'LICENSE',
+        paste_bin = 'L5wNeEVv'
+    }
 }
 
 for k, lib in pairs(Libraries) do
