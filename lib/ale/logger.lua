@@ -1,3 +1,5 @@
+-- https://pastebin.com/wy7Vut3x
+
 Logger = {
     levels = {
     fatal = 0,

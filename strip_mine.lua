@@ -6,7 +6,23 @@
 -- To change this template use File | Settings | File Templates.
 --
 
-dofile('/t.lua')
+dofile('lib/ale/turtle/turtle.lua')
+
+T = Miner:new(217, 4, -69, "East")
+
+
+
+Target = Position:new(32, 15, 16, "North")
+Target:offsetByPosition(T.position)
+print(Target:toString())
+
+-- T:save_position('start')
+
+-- if not T.inventory:getSlot('minecraft:chest', 2) then
+--     error "Requires at least 2 chests"
+-- end
+
+
 
 target_pos = {}
 target_pos["x"] = 32

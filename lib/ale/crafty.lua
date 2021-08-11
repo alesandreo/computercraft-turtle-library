@@ -1,10 +1,4 @@
---
--- Created by IntelliJ IDEA.
--- User: amcconaughey
--- Date: 2/8/21
--- Time: 3:31 PM
--- To change this template use File | Settings | File Templates.
---
+-- https://pastebin.com/MqCphaSj
 
 function get_slot(inventory, name)
     for slot_number, item_data in ipairs(inventory.list()) do
