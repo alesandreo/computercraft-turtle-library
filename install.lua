@@ -113,7 +113,7 @@ Libraries = {
     },
     {
         file_path = "lib/ale/turtle/turtle.lua",
-        paste_bin = "JjCz2dSv"
+        paste_bin = "iEcuJ70J"
     },
     {
         file_path = "lib/ale/ale.lua",

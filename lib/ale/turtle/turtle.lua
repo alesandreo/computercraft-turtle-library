@@ -1,4 +1,4 @@
--- https://pastebin.com/JjCz2dSv
+-- https://pastebin.com/iEcuJ70J
 
 Turtle = {
   -- Turtle's Position Relative to start
