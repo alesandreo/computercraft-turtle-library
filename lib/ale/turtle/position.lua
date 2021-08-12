@@ -6,6 +6,7 @@ Position = {
   y = 0,
   z = 0,
   face = 0,
+  filename = nil,
   facing_map = {
     N = 0,
     E = 1,
@@ -17,6 +18,20 @@ Position = {
 Position.__index = Position
 
 function Position:new(x, y , z, face)
+  if type(x) == "string" then
+    self.filename = x
+    x = nil
+    if not self.config then
+      self.config = Config:new(self.filename)
+      if self.config:load() then
+        x = self.config.data.x
+        y = self.config.data.y
+        z = self.config.data.z
+        face = self.config.data.face
+      else
+      end
+    end
+  end
   local o = {}
   setmetatable(o, Position)
   o.x = x or 0
@@ -62,6 +77,7 @@ function Position:setFace(face)
     face = self:getFaceFromString(face)
   end
   self.face = face % 4
+  self:persistPosition()
   return true
 end
 
@@ -88,6 +104,16 @@ function Position:turnAround(n)
   return true
 end
 
+function Position:persistPosition()
+  if self.filename then
+    if not self.config then
+      self.config = Config:new(self.filename)
+    end
+    self.config.data = {x = self.x, y = self.y, z = self.z, face = self.face}
+    self.config:save()
+  end
+end
+
 function Position:increment(n, direction)
   n = n or 1
   if direction == 0 then
@@ -103,6 +129,7 @@ function Position:increment(n, direction)
   elseif direction == 5 then
     self.y = self.y - n
   end
+  self:persistPosition()
   return true
 end
 

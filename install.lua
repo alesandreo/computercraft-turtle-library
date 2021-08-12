@@ -161,3 +161,5 @@ end
 if not require('lib.ale.ale') then
     error("Failed to properly install.")
 end
+
+fs.makeDir("configs")

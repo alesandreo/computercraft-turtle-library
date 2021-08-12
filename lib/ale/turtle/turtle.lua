@@ -2,7 +2,7 @@
 
 Turtle = {
   -- Turtle's Position Relative to start
-  position = Position:new(),
+  position = Position:new("configs/turtle.position"),
   -- A table to hold important waypoints.
   saved_positions = {},
   -- A history which can be manipulated to rewind actions.
@@ -22,13 +22,11 @@ function Turtle:new(x, y, z, facing)
   local o = {}
   setmetatable(o, self)
   self.__index = self
-  self.position.x = x or 0
-  self.position.y = y or 0
-  self.position.z = z or 0
+  self.position.x = x or self.position.x
+  self.position.y = y or self.position.y
+  self.position.z = z or self.position.z
   if facing then
     self.position:setFace(facing)
-  else
-    self.position:setFace(0)
   end
   return o
 end

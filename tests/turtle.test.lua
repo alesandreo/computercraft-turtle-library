@@ -1,6 +1,9 @@
 -- https://pastebin.com/tphvJG4e
 
 turtle = nil
+if not textutils then
+  require('lib.ale.mock.textutils')
+end
 require ('lib.ale.ale')
 function Assert(booltest, message)
   message = message or "Test failed."
@@ -87,8 +90,8 @@ t.whitelist:addBlock('minecraft:oak_log')
 t.whitelist:addTag('forge:ores')
 Assert(t:isValuable({name = 'minecraft:iron_ore', tags = {}}), "Iron ore isn't marked as valuable.")
 Assert(not t:isValuable({name = 'minecraft:god_mode', tags = {}}), "Untagged ore is whitelisting.")
-Assert(t:isValuable({name = 'minecraft:diamond', tags = {'forge:ores'}}), "Tag forge ores isn't marked as valuable.")
-Assert(not t:isValuable({name = 'minecraft:diamond', tags = {'forge:not_ore'}}), "Untagged ore is whitelisting.")
+Assert(t:isValuable({name = 'minecraft:diamond', tags = {['forge:ores'] = true}}), "Tag forge ores isn't marked as valuable.")
+Assert(not t:isValuable({name = 'minecraft:diamond', tags = {['forge:not_ore'] = true}}), "Untagged ore is whitelisting.")
 t.filler:addBlock('minecraft:dirt')
 t.blacklist:addBlock('minecraft:dirt')
 t:delete_position("start")
