@@ -39,7 +39,7 @@ function BlockList:checkBlockTags(block_data)
   if not block_data.tags then
     return false
   end
-  for k, tag in ipairs(block_data.tags) do
+  for tag, tagBool in pairs(block_data.tags) do
     if  self:checkBlockTag(tag) then
       return true
     end

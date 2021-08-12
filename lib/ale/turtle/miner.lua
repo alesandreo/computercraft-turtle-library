@@ -207,20 +207,35 @@ end
 function Miner:fill()
   local filler_slot
   filler_slot = Miner:getFillerSlot()
-  filler_slot:select()
-  turtle.place()
+  if filler_slot then
+    filler_slot:select()
+    turtle.place()
+    return true
+  else
+    return false
+  end
 end
 
 function Miner:fillDown()
   local filler_slot
-  filler_slot = Miner:getFillerSlot()
-  filler_slot:select()
-  turtle.placeDown()
+  if filler_slot then
+    filler_slot = Miner:getFillerSlot()
+    filler_slot:select()
+    turtle.placeDown()
+    return true
+  else
+    return false
+  end
 end
 
 function Miner:fillUp()
   local filler_slot
-  filler_slot = Miner:getFillerSlot()
-  filler_slot:select()
-  turtle.placeUp()
+  if filler_slot then
+    filler_slot = Miner:getFillerSlot()
+    filler_slot:select()
+    turtle.placeUp()
+    return true
+  else
+    return false
+  end
 end

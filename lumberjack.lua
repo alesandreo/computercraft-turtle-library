@@ -1,24 +1,32 @@
-if not fs.exists("t.lua") then
-    shell.run("pastebin get Gg3PGyUn t.lua")
+-- https://pastebin.com/1Mvs8GEx
+require 'lib.ale.ale'
+
+Lumberjack = Miner:new()
+
+Lumberjack.__index = Lumberjack
+Lumberjack.plantables = BlockList:new()
+
+Lumberjack.plantables:addBlock('minecraft:oak_sapling')
+Lumberjack.whitelist:addTag('minecraft:logs')
+Lumberjack.blacklist:addTag('forge:sapling')
+
+function Lumberjack:plant()
+    local slot = self.inventory:findInBlockList(self.plantables)
+    if not slot then print("Didn't find a plantable.") return false end
+    slot:select()
+    return turtle.place()
 end
 
-dofile("t.lua")
-
-function plant(slot)
-    turtle.select(slot)
-    turtle.place()
-end
-
-savePosition("start", getTurtlePosition())
-dig_whitelist_tags["minecraft:logs"] = true
-
-while turtle.getItemCount(1) > 0 do
-    exist, block_data = turtle.inspect()
-    if not exist then
-        plant(1)
-    elseif exist and block_data.tags["forge:sapling"] then
-        os.sleep(30)
-    else
-        mineOre()
+L = Lumberjack:new()
+while (true) do
+    if L:checkBlock() then
+        L:mineBlock()
     end
+    if not turtle.detect() then
+        if not L:plant() then
+            print("Planting failed")
+            break
+        end
+    end
+    os.sleep(10)
 end

@@ -1,8 +1,7 @@
 -- https://pastebin.com/tphvJG4e
 
 turtle = nil
-dofile('../lib/ale/turtle/turtle.lua')
-
+require ('lib.ale.ale')
 function Assert(booltest, message)
   message = message or "Test failed."
   if not booltest then

@@ -55,8 +55,6 @@ if turtle == nil then
     getItemDetail = Mock.Return_false_item,
   }
 end
-if not os then
-  os = {
-    sleep = Mock.Return_true
-  }
+if not os.sleep then
+  os.sleep = Mock.Return_true
 end

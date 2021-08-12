@@ -84,6 +84,18 @@ function TurtleInventory:getSlot(block_name, quantity)
       return slot
     end
   end
+  return nil
+end
+
+function TurtleInventory:findInBlockList(blocklist, quantity)
+  quantity = quantity or 1
+  for block_name, bool_val in pairs(blocklist.blocks) do
+    local slot = self:getSlot(block_name, quantity)
+    if slot then
+      return slot
+    end
+  end
+  return nil
 end
 
 function TurtleInventory:consolidate()
