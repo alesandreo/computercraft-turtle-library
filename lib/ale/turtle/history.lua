@@ -47,3 +47,19 @@ function History:undo()
   end
   return action
 end
+
+function History:erase_undo(n)
+  n = n or 1
+  for i=1, n, 1 do
+    table.remove(self.undo_log)
+  end
+  return true
+end
+
+function History:erase_redo(n)
+  n = n or 1
+  for i=1, n, 1 do
+    table.remove(self.redo_log)
+  end
+  return true
+end
