@@ -53,6 +53,7 @@ if turtle == nil then
     inspectUp = Mock.Return_false_inspect,
     inspectDown = Mock.Return_false_inspect,
     getItemDetail = Mock.Return_false_item,
+    transferTo = Mock.Return_true,
   }
 end
 if not os.sleep then

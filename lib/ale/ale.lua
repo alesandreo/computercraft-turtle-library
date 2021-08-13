@@ -4,6 +4,10 @@
 -- Uses regex to pull the package string apart for building out relative package requirements.
 LibraryPath = (...):match("(.-)[^%.]+$")
 
+turtle = nil
+if not textutils then
+  require('lib.ale.mock.textutils')
+end
 require(LibraryPath .. 'mock.mock')
 require(LibraryPath .. 'ar')
 require(LibraryPath .. 'config')

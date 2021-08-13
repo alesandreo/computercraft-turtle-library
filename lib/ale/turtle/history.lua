@@ -20,9 +20,6 @@ function History:addToLog(action)
   if self.rewinding then
     return table.insert(self.redo_log, action)
   end
-  if not self.redoing then
-    self:clearRedoLog()
-  end
   return table.insert(self.undo_log, action)
 end
 
@@ -51,7 +48,7 @@ end
 function History:erase_undo(n)
   n = n or 1
   for i=1, n, 1 do
-    table.remove(self.undo_log)
+    print("Erasing: "..table.remove(self.undo_log))
   end
   return true
 end
@@ -59,7 +56,7 @@ end
 function History:erase_redo(n)
   n = n or 1
   for i=1, n, 1 do
-    table.remove(self.redo_log)
+    print("Erasing: "..table.remove(self.redo_log))
   end
   return true
 end

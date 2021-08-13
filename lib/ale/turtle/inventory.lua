@@ -28,7 +28,7 @@ function TurtleInventorySlot:getName()
 end
 
 function TurtleInventorySlot:count()
-  return turtle.getItemDetail(self.slot_number).count
+  return turtle.getItemCount(self.slot_number)
 end
 
 function TurtleInventorySlot:contains(block_name, quantity)
@@ -79,7 +79,7 @@ end
 
 function TurtleInventory:getSlot(block_name, quantity)
   quantity = quantity or 1
-  for k, slot in pairs(self.slots) do
+  for k, slot in ipairs(self.slots) do
     if slot:contains(block_name, quantity) then
       return slot
     end
@@ -108,7 +108,6 @@ function TurtleInventory:consolidate()
         if not inventory[name] then
           inventory[name] = {}
         end
-        print("Found: "..name)
         table.insert(inventory[name], slot)
       end
     end
@@ -124,4 +123,13 @@ function TurtleInventory:consolidate()
       end
     end
   end
+end
+
+function TurtleInventory:is_full()
+  for k, slot in ipairs(self.slots) do
+    if slot:count() == 0 then
+      return false
+    end
+  end
+  return true
 end

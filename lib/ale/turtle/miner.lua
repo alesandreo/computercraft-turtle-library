@@ -45,7 +45,7 @@ function Miner:checkMineWall()
   if self:checkBlock() then
     self:mineBlock()
   end
-  if turtle.detect() then
+  if not turtle.detect() then
     self:fill()
   end
 end
@@ -55,7 +55,7 @@ function Miner:checkMineUp()
   if self:checkBlockUp() then
     self:mineBlockUp()
   end
-  if turtle.detectUp() then
+  if not turtle.detectUp() then
     self:fillUp()
   end
 end
@@ -65,21 +65,34 @@ function Miner:checkMineDown()
   if self:checkBlockDown() then
     self:mineBlockDown()
   end
-  if turtle.detectDown() then
+  if not turtle.detectDown() then
     self:fillDown()
   end
 end
 
-function Miner:checkMineShaft()
+function Miner:checkMineWalls()
+  self:turnLeft()
   self:checkMineWall()
-  self:turnLeft(false)
+  self:turnLeft()
+  self:turnLeft()
   self:checkMineWall()
-  self:turnLeft(false)
-  self:turnLeft(false)
-  self:checkMineWall()
-  self:turnLeft(false)
+  self:turnLeft()
   self:checkMineUp()
   self:checkMineDown()
+  self.history:erase_undo(4)
+end
+
+function Miner:checkMineShaft()
+  self:checkMineWall()
+  self:turnLeft()
+  self:checkMineWall()
+  self:turnLeft()
+  self:turnLeft()
+  self:checkMineWall()
+  self:turnLeft()
+  self:checkMineUp()
+  self:checkMineDown()
+  self.history:erase_undo(4)
 end
 
 function Miner:mineBlock()
@@ -105,7 +118,7 @@ function Miner:mineBlockUp()
   self:up()
   self:checkMineShaft()
   self:rewind(1,false)
-  self:fillUp()
+  self:fillUp() 
   self.stack = self.stack - 1
 end
 
