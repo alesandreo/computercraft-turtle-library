@@ -28,5 +28,11 @@ while (true) do
             break
         end
     end
+    local bone_meal
+    bone_meal = L.inventory:getSlot("minecraft:bone_meal")
+    if bone_meal then
+        bone_meal:select()
+        turtle.place()
+    end
     os.sleep(10)
 end
