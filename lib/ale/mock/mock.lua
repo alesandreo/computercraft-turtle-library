@@ -11,6 +11,12 @@ Mock.__index = Mock
   function Mock.Return_int()
     return math.random(0, 10)
   end
+  function Mock.Return_nil()
+    return nil
+  end
+  function Mock.Return_Peripheral_Name()
+    return "back"
+  end
   function Mock.Return_false_inspect()
     local inspects = {
       {
@@ -23,6 +29,9 @@ Mock.__index = Mock
       }
     }
     return true, inspects[math.random(1, #inspects)]
+  end
+  function Mock.Return_Random_Boolean()
+    return math.random(2) == 1
   end
   function Mock.Return_false_item()
     return {
@@ -55,6 +64,14 @@ if turtle == nil then
     getItemDetail = Mock.Return_false_item,
     transferTo = Mock.Return_true,
   }
+end
+if not peripheral then
+  peripheral = {
+    getName = Mock.Return_Peripheral_Name,
+    isPresent = Mock.Return_false,
+    wrap = Mock.Return_nil,
+  }
+
 end
 if not os.sleep then
   os.sleep = Mock.Return_true

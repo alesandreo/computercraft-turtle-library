@@ -105,6 +105,9 @@ print(T.position:toString())
 Target = Position:new(32, 15, 16, "North")
 Target:offsetByPosition(T.position)
 T:goToPosition(Target)
+
+
+
 -- for x = 0, 16, 1 do
 --   print("Mining")
 --   t:mineBlock()
