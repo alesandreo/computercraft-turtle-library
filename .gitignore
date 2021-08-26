@@ -199,3 +199,4 @@ fabric.properties
 .idea
 *.iml
 configs/turtle.position
+.vscode/settings.json
