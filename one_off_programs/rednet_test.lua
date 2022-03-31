@@ -19,13 +19,9 @@ while true do
     event, modemSide, senderChannel, replyChannel, message, senderDistance = os.pullEvent("modem_message")
     os.sleep(1)
     modem.transmit(replyChannel, senderChannel, "EHLO")
+end
 
 
-function processMessage(event, modemSide, senderChannel, replyChannel, message, senderDistance)id = nil,
-61
-id = nil,
-61
-id = nil,
-61
-id = nil,
-61
+function processMessage(event, modemSide, senderChannel, replyChannel, message, senderDistance)
+    error("unfinished")
+end
