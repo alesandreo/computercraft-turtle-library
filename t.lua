@@ -29,6 +29,8 @@ flag_whitelist = {}
 dig_whitelist_tags = {}
 dig_blacklist_tags = {}
 
+chest_active = false
+
 CHEST_SLOT = 13
 BUCKET_SLOT = 14
 FILLER_SLOT = 15
@@ -163,7 +165,7 @@ end
 -- 3 = West
 function getFace(_position)
     _position = _position or turtle_pos
-    return turtle_pos["face"] % 4
+    return _position["face"] % 4
 end
 
 function getFaceAsString(facing)
@@ -192,7 +194,7 @@ function getFaceFromString(facing)
     end
 end
 
-function adjustPostion(adjustment)
+function adjustPosition(adjustment)
     local facing = getFace()
     if facing == 0 then
         turtle_pos["x"] = turtle_pos["x"] + adjustment
@@ -305,7 +307,7 @@ function forward(record)
     end
     if turtle.forward() then
         if record then recordAction("forward") end
-        adjustPostion(1)
+        adjustPosition(1)
         return true
     else
         return false
@@ -318,7 +320,7 @@ function back(record)
     local ret_val
     if turtle.back() then
         if record then recordAction("back") end
-        adjustPostion(-1)
+        adjustPosition(-1)
         return true
     else
         turnAround(false)
@@ -351,8 +353,8 @@ function turnAround(record)
 end
 
 function clearRedoTable()
-    for i, v in ipairs(redo_crumbs) do
-        table.remove(redo_crumbs, i)
+    while #redo_crumbs > 0 do
+        table.remove(redo_crumbs)
     end
 end
 
@@ -479,7 +481,7 @@ end
 
 function getPositionString(_position)
     _position = _position or turtle_pos
-    return "[",_position["x"],",",_position["y"],",",_position["z"],",",getFaceAsString(getFace(_position["face"])),"]"
+    return "[".._position["x"]..",".._position["y"]..",".._position["z"]..","..getFaceAsString(getFace(_position)).."}"
 end
 
 function printPos(_position)
@@ -1029,7 +1031,7 @@ function lavaSwim()
 end
 
 function lavaSwimUp()
-    local orig_sel = turtle.getselectedslot()
+    local orig_sel = turtle.getSelectedSlot()
     turtle.select(BUCKET_SLOT)
     turtle.placeUp()
     up()
@@ -1038,12 +1040,71 @@ function lavaSwimUp()
 end
 
 function lavaSwimDown()
-    local orig_sel = turtle.getselectedslot()
+    local orig_sel = turtle.getSelectedSlot()
     turtle.select(BUCKET_SLOT)
     turtle.placeDown()
     down()
     turtle.placeUp()
     turtle.select(orig_sel)
+end
+
+------------------------------
+-- Inventory Management Functions
+-- Shared functions for chest placement and inventory dumping
+------------------------------
+function createDropPoint()
+    local og_slot = turtle.getSelectedSlot()
+    down(false)
+    down(false)
+    processLavaDown()
+    processLava()
+    turnLeft(false)
+    processLava()
+    turnLeft(false)
+    processLava()
+    turnLeft(false)
+    processLava()
+    turnLeft(false)
+    up(false)
+    turtle.select(CHEST_SLOT)
+    turtle.placeDown()
+    up(false)
+    savePosition("active_chest")
+    chest_active = true
+    turtle.select(og_slot)
+end
+
+function dumpInventory()
+    local og_slot = turtle.getSelectedSlot()
+    down(false)
+    for slot=1,12 do
+        turtle.select(slot)
+        if not turtle.dropDown() then
+            chest_active = false
+            deletePosition("active_chest")
+        end
+    end
+    up(false)
+    turtle.select(og_slot)
+end
+
+function cleanUpInventory()
+    while processInventory() do
+        if chest_active then
+            savePosition("cleanup_resume")
+            repeat
+                rewind()
+            until ((not chest_active) or comparePositions(turtle_pos, getPosition("active_chest")))
+            dumpInventory()
+            repeat
+                redo()
+            until (comparePositions(turtle_pos, getPosition("cleanup_resume")))
+            deletePosition("cleanup_resume")
+        else
+            createDropPoint()
+            dumpInventory()
+        end
+    end
 end
 
 init()
