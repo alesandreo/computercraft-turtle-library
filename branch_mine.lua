@@ -6,7 +6,7 @@
 -- To change this template use File | Settings | File Templates.
 --
 if not fs.exists("t.lua") then
-    shell.run("pastebin get kAueus0M t.lua")
+    shell.run("pastebin get wpEGMvNm t.lua")
 end
 
 dofile("t.lua")
