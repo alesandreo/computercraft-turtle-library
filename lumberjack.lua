@@ -1,5 +1,5 @@
 if not fs.exists("t.lua") then
-    shell.run("pastebin get Gg3PGyUn t.lua")
+    shell.run("pastebin get wpEGMvNm t.lua")
 end
 
 dofile("t.lua")

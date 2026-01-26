@@ -6,7 +6,7 @@
 -- To change this template use File | Settings | File Templates.
 --
 if not fs.exists("t.lua") then
-    shell.run("pastebin get Gg3PGyUn t.lua")
+    shell.run("pastebin get wpEGMvNm t.lua")
 end
 
 dofile("t.lua")
@@ -15,67 +15,10 @@ trunk_length = 27
 branch_length = 15
 mine_height = 5
 
-chest_active = false
-
 directionAction = "turnLeft"
 
 --flag_whitelist["minecraft:emerald_ore"] = true
 --flag_whitelist["minecraft:diamond_ore"] = true
-
-function createDropPoint()
-    local og_slot = turtle.getSelectedSlot()
-    down(false)
-    down(false)
-    processLavaDown()
-    processLava()
-    turnLeft(false)
-    processLava()
-    turnLeft(false)
-    processLava()
-    turnLeft(false)
-    processLava()
-    turnLeft(false)
-    up(false)
-    turtle.select(CHEST_SLOT)
-    turtle.placeDown()
-    up(false)
-    savePosition("active_chest")
-    chest_active = true
-    turtle.select(og_slot)
-end
-
-function dumpInventory()
-    local og_slot = turtle.getSelectedSlot()
-    down(false)
-    for slot=1,12 do
-        turtle.select(slot)
-        if not turtle.dropDown() then
-            chest_active = false
-            deletePosition("active_chest")
-        end
-    end
-    up(false)
-    turtle.select(og_slot)
-end
-
-function cleanUpInventory()
-    while processInventory() do
-        if chest_active then
-            savePosition("cleanup_resume")
-            repeat
-                rewind()
-            until (( not chest_active) or comparePositions(turtle_pos, getPosition("active_chest")))
-            dumpInventory()
-            repeat
-                redo()
-            until (comparePositions(turtle_pos, getPosition("cleanup_resume")))
-            deletePosition("cleanup_resume")
-        else
-            createDropPoint()
-            dumpInventory()
-        end
-    end
-end
 
 function trunk(count, action)
     count = count or 1

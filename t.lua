@@ -29,6 +29,8 @@ flag_whitelist = {}
 dig_whitelist_tags = {}
 dig_blacklist_tags = {}
 
+chest_active = false
+
 CHEST_SLOT = 13
 BUCKET_SLOT = 14
 FILLER_SLOT = 15
@@ -52,11 +54,110 @@ filler_whitelist["embellishcraft:basalt_cobblestone"] = true
 filler_whitelist["rftoolsbase:dimensionalshard_overworld"] = true
 
 
+STATE_FILE = ".turtle_state"
+SAVE_INTERVAL = 10  -- Save state every N recorded actions
+action_count = 0
+
 function init()
+    if not loadState() then
+        turtle_pos["x"] = 0
+        turtle_pos["y"] = 0
+        turtle_pos["z"] = 0
+        turtle_pos["face"] = 10000
+        log("Initialized fresh turtle state", "info", "state")
+    else
+        log("Restored turtle state from file", "info", "state")
+    end
+end
+
+function saveState()
+    local file = fs.open(STATE_FILE, "w")
+    if not file then
+        log("ERROR: Could not open state file for writing", "error", "state")
+        return false
+    end
+    -- Save position
+    file.writeLine(tostring(turtle_pos["x"]))
+    file.writeLine(tostring(turtle_pos["y"]))
+    file.writeLine(tostring(turtle_pos["z"]))
+    file.writeLine(tostring(turtle_pos["face"]))
+    -- Save crumb count and crumbs
+    file.writeLine(tostring(#crumbs))
+    for i, action in ipairs(crumbs) do
+        file.writeLine(action)
+    end
+    -- Save saved_positions count and positions
+    local pos_count = 0
+    for _ in pairs(saved_positions) do pos_count = pos_count + 1 end
+    file.writeLine(tostring(pos_count))
+    for name, pos in pairs(saved_positions) do
+        file.writeLine(name)
+        file.writeLine(tostring(pos["x"]))
+        file.writeLine(tostring(pos["y"]))
+        file.writeLine(tostring(pos["z"]))
+        file.writeLine(tostring(pos["face"]))
+    end
+    -- Save chest_active
+    file.writeLine(tostring(chest_active))
+    file.close()
+    return true
+end
+
+function loadState()
+    if not fs.exists(STATE_FILE) then
+        return false
+    end
+    local file = fs.open(STATE_FILE, "r")
+    if not file then
+        return false
+    end
+    -- Load position
+    turtle_pos["x"] = tonumber(file.readLine()) or 0
+    turtle_pos["y"] = tonumber(file.readLine()) or 0
+    turtle_pos["z"] = tonumber(file.readLine()) or 0
+    turtle_pos["face"] = tonumber(file.readLine()) or 10000
+    -- Load crumbs
+    local crumb_count = tonumber(file.readLine()) or 0
+    crumbs = {}
+    for i = 1, crumb_count do
+        local action = file.readLine()
+        if action then
+            table.insert(crumbs, action)
+        end
+    end
+    -- Load saved_positions
+    local pos_count = tonumber(file.readLine()) or 0
+    saved_positions = {}
+    for i = 1, pos_count do
+        local name = file.readLine()
+        if name then
+            saved_positions[name] = {
+                x = tonumber(file.readLine()) or 0,
+                y = tonumber(file.readLine()) or 0,
+                z = tonumber(file.readLine()) or 0,
+                face = tonumber(file.readLine()) or 10000
+            }
+        end
+    end
+    -- Load chest_active
+    local chest_str = file.readLine()
+    chest_active = (chest_str == "true")
+    file.close()
+    return true
+end
+
+function clearState()
+    if fs.exists(STATE_FILE) then
+        fs.delete(STATE_FILE)
+    end
+    crumbs = {}
+    redo_crumbs = {}
+    saved_positions = {}
     turtle_pos["x"] = 0
     turtle_pos["y"] = 0
     turtle_pos["z"] = 0
     turtle_pos["face"] = 10000
+    chest_active = false
 end
 
 function shallowcopytable(orig)
@@ -163,7 +264,7 @@ end
 -- 3 = West
 function getFace(_position)
     _position = _position or turtle_pos
-    return turtle_pos["face"] % 4
+    return _position["face"] % 4
 end
 
 function getFaceAsString(facing)
@@ -192,7 +293,7 @@ function getFaceFromString(facing)
     end
 end
 
-function adjustPostion(adjustment)
+function adjustPosition(adjustment)
     local facing = getFace()
     if facing == 0 then
         turtle_pos["x"] = turtle_pos["x"] + adjustment
@@ -305,7 +406,7 @@ function forward(record)
     end
     if turtle.forward() then
         if record then recordAction("forward") end
-        adjustPostion(1)
+        adjustPosition(1)
         return true
     else
         return false
@@ -318,30 +419,38 @@ function back(record)
     local ret_val
     if turtle.back() then
         if record then recordAction("back") end
-        adjustPostion(-1)
+        adjustPosition(-1)
         return true
     else
         turnAround(false)
         ret_val = forward(false)
         turnAround(false)
-        if record then recordAction("back") end
+        if ret_val then
+            if record then recordAction("back") end
+        end
         return ret_val
     end
 end
 
 function strafeLeft(record)
-    local return_value = true
-    turnLeft(record)
-    return_value = forward(record)
-    turnRight(record)
+    if record == nil then record = true end
+    turnLeft(false)
+    local return_value = forward(false)
+    turnRight(false)
+    if return_value and record then
+        recordAction("strafeLeft")
+    end
     return return_value
 end
 
 function strafeRight(record)
-    local return_value = true
-    turnRight(record)
-    return_value = forward(record)
-    turnLeft(record)
+    if record == nil then record = true end
+    turnRight(false)
+    local return_value = forward(false)
+    turnLeft(false)
+    if return_value and record then
+        recordAction("strafeRight")
+    end
     return return_value
 end
 
@@ -351,8 +460,8 @@ function turnAround(record)
 end
 
 function clearRedoTable()
-    for i, v in ipairs(redo_crumbs) do
-        table.remove(redo_crumbs, i)
+    while #redo_crumbs > 0 do
+        table.remove(redo_crumbs)
     end
 end
 
@@ -361,6 +470,11 @@ function recordAction(action)
         clearRedoTable()
     end
     table.insert(crumbs, action)
+    action_count = action_count + 1
+    if action_count >= SAVE_INTERVAL then
+        saveState()
+        action_count = 0
+    end
 end
 
 function rewind(numberOfMoves, record)
@@ -387,10 +501,26 @@ end
 
 function rewindToPosition(position, record)
     local return_value
+    local retry_count = 0
+    local max_retries = 3
     if record == nil then record = true end
     repeat
         return_value = rewind(1, record)
+        if not return_value and not comparePositions(turtle_pos, position) then
+            retry_count = retry_count + 1
+            if retry_count <= max_retries then
+                log("WARN: rewind failed, retry "..retry_count.."/"..max_retries, "warn", "breadcrumbs")
+                os.sleep(0.5)
+                return_value = true  -- Try again
+            else
+                log("ERROR: rewindToPosition failed after "..max_retries.." retries", "error", "breadcrumbs")
+                return false
+            end
+        else
+            retry_count = 0  -- Reset on success
+        end
     until ((not return_value) or (comparePositions(turtle_pos, position)))
+    return comparePositions(turtle_pos, position)
 end
 
 function redo(numberOfMoves)
@@ -439,8 +569,12 @@ function getOppositeAction(action)
         return "back"
     elseif lower_action == "back" then
         return "forward"
+    elseif lower_action == "strafeleft" then
+        return "strafeRight"
+    elseif lower_action == "straferight" then
+        return "strafeLeft"
     else
-        error("Invalid action passed: \"",action,"\"")
+        error("Invalid action passed: \""..action.."\"")
         return false
     end
 end
@@ -460,8 +594,12 @@ function doAction(action, record)
         return forward(record)
     elseif lower_action == "back" then
         return back(record)
+    elseif lower_action == "strafeleft" then
+        return strafeLeft(record)
+    elseif lower_action == "straferight" then
+        return strafeRight(record)
     else
-        error("Invalid action passed: \"",action,"\"")
+        error("Invalid action passed: \""..action.."\"")
         return false
     end
 end
@@ -479,7 +617,7 @@ end
 
 function getPositionString(_position)
     _position = _position or turtle_pos
-    return "[",_position["x"],",",_position["y"],",",_position["z"],",",getFaceAsString(getFace(_position["face"])),"]"
+    return "[".._position["x"]..",".._position["y"]..",".._position["z"]..","..getFaceAsString(getFace(_position)).."}"
 end
 
 function printPos(_position)
@@ -649,10 +787,20 @@ function mine(count, height, placement)
     if placement == nil then placement = true end
     height = height or 3
     local counter=0
+    local move_success = true
     repeat
         counter = counter + 1
         processLava()
-        forward()
+        move_success = forward()
+        if not move_success then
+            log("WARN: forward() failed in mine(), retrying...", "warn", "mine")
+            os.sleep(0.5)
+            move_success = forward()
+            if not move_success then
+                log("ERROR: forward() failed twice, stopping mine()", "error", "mine")
+                return false
+            end
+        end
         local present, block_data = turtle.inspect()
         if present then
             if string.find(block_data.name, 'water') then
@@ -690,6 +838,7 @@ function mine(count, height, placement)
         mineWalls(height, placement)
         os.sleep(0.2)
     until (counter >= count)
+    return true
 end
 
 function checkBlockUp()
@@ -723,7 +872,12 @@ function mineOre()
     end
     os.sleep(stack/10.0)
     stack = stack + 1
-    forward()
+    local moved = forward()
+    if not moved then
+        log("WARN: mineOre could not move forward", "warn", "mine")
+        stack = stack - 1
+        return false
+    end
     processLava()
     if checkBlock() then
         mineOre()
@@ -754,6 +908,7 @@ function mineOre()
     rewind(1, false)
     fill()
     stack = stack - 1
+    return true
 end
 
 function mineOreUp()
@@ -763,7 +918,12 @@ function mineOreUp()
     end
     os.sleep(stack/10.0)
     stack = stack + 1
-    up()
+    local moved = up()
+    if not moved then
+        log("WARN: mineOreUp could not move up", "warn", "mine")
+        stack = stack - 1
+        return false
+    end
     processLava()
     if checkBlock() then
         mineOre()
@@ -795,6 +955,7 @@ function mineOreUp()
     rewind(1, false)
     fillUp()
     stack = stack - 1
+    return true
 end
 
 function mineOreDown()
@@ -804,7 +965,12 @@ function mineOreDown()
     end
     os.sleep(stack/10.0)
     stack = stack + 1
-    down()
+    local moved = down()
+    if not moved then
+        log("WARN: mineOreDown could not move down", "warn", "mine")
+        stack = stack - 1
+        return false
+    end
     processLava()
     if checkBlock() then
         mineOre()
@@ -837,6 +1003,7 @@ function mineOreDown()
     rewind(1, false)
     fillDown()
     stack = stack - 1
+    return true
 end
 
 function processBlockUp(placement)
@@ -1029,7 +1196,7 @@ function lavaSwim()
 end
 
 function lavaSwimUp()
-    local orig_sel = turtle.getselectedslot()
+    local orig_sel = turtle.getSelectedSlot()
     turtle.select(BUCKET_SLOT)
     turtle.placeUp()
     up()
@@ -1038,12 +1205,77 @@ function lavaSwimUp()
 end
 
 function lavaSwimDown()
-    local orig_sel = turtle.getselectedslot()
+    local orig_sel = turtle.getSelectedSlot()
     turtle.select(BUCKET_SLOT)
     turtle.placeDown()
     down()
     turtle.placeUp()
     turtle.select(orig_sel)
+end
+
+------------------------------
+-- Inventory Management Functions
+-- Shared functions for chest placement and inventory dumping
+------------------------------
+function createDropPoint()
+    local og_slot = turtle.getSelectedSlot()
+    down(false)
+    down(false)
+    processLavaDown()
+    processLava()
+    turnLeft(false)
+    processLava()
+    turnLeft(false)
+    processLava()
+    turnLeft(false)
+    processLava()
+    turnLeft(false)
+    up(false)
+    turtle.select(CHEST_SLOT)
+    turtle.placeDown()
+    up(false)
+    savePosition("active_chest")
+    chest_active = true
+    turtle.select(og_slot)
+end
+
+function dumpInventory()
+    local og_slot = turtle.getSelectedSlot()
+    down(false)
+    for slot=1,12 do
+        turtle.select(slot)
+        if not turtle.dropDown() then
+            chest_active = false
+            deletePosition("active_chest")
+        end
+    end
+    up(false)
+    turtle.select(og_slot)
+end
+
+function cleanUpInventory()
+    while processInventory() do
+        if chest_active then
+            savePosition("cleanup_resume")
+            local reached_chest = rewindToPosition(getPosition("active_chest"), true)
+            if reached_chest and comparePositions(turtle_pos, getPosition("active_chest")) then
+                dumpInventory()
+            else
+                log("WARN: Could not reach chest, creating new drop point", "warn", "inventory")
+                createDropPoint()
+                dumpInventory()
+            end
+            local resume_pos = getPosition("cleanup_resume")
+            if resume_pos then
+                resumeToPosition(resume_pos)
+                deletePosition("cleanup_resume")
+            end
+        else
+            createDropPoint()
+            dumpInventory()
+        end
+    end
+    saveState()
 end
 
 init()
